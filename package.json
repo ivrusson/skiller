@@ -1,0 +1,26 @@
+{
+  "name": "skiller",
+  "version": "0.1.0",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "skiller": "./index.ts"
+  },
+  "scripts": {
+    "dev": "bun run --watch index.ts ui",
+    "start": "bun run index.ts",
+    "ui": "bun run index.ts ui",
+    "serve": "bun run index.ts ui",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@opentui/core": "^0.5.11"
+  }
+}
