@@ -1,0 +1,47 @@
+<header>
+  <div class="bar">
+    <div class="bar-start">
+      <div class="brand">skiller<span class="sq"></span></div>
+      <nav class="tabs">
+        <button id="tabInstalled" class="active">Installed</button>
+        <button id="tabExplore">Explore</button>
+      </nav>
+    </div>
+    <span id="meta">loading…</span>
+    <div class="spacer"></div>
+    <div class="bar-end">
+      <button id="refresh" title="Re-query the skills.sh registry">
+        <svg viewBox="0 0 16 16"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"/></svg>
+        <span id="refreshLabel">Refresh</span>
+      </button>
+      <button id="theme" title="Toggle light / dark" aria-label="Toggle theme">
+        <svg class="ic-sun" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.2"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg>
+        <svg class="ic-moon" viewBox="0 0 16 16"><path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5a5.5 5.5 0 1 0 7 7z"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="controls-top">
+      <input id="q" type="search" placeholder="Search name, description, owner, repo…" autofocus>
+      <div class="filter-group" id="sortFilters" role="group" aria-label="Sort">
+        <span class="filter-label">Sort</span>
+        <button type="button" class="fchip all active" data-sort="name">name</button>
+        <button type="button" class="fchip" data-sort="installs">downloads</button>
+        <button type="button" class="fchip" data-sort="modified">modified</button>
+        <button type="button" class="fchip" data-sort="usage">usage</button>
+        <button type="button" class="fchip" data-sort="owner" title="Group by GitHub owner / org">owner</button>
+        <button type="button" class="fchip" data-sort="repo" title="Group by owner/repo">repo</button>
+      </div>
+    </div>
+    <div class="controls-filters" id="sourceFilters" role="group" aria-label="Source"></div>
+    <div class="controls-filters" id="ownerFilters" role="group" aria-label="Publisher"></div>
+    <div class="controls-filters controls-secondary">
+      <div class="filter-group" id="scopeFilters" role="group" aria-label="Scope"></div>
+      <div class="filter-group" role="group" aria-label="Registry">
+        <span class="filter-label">Listed</span>
+        <button type="button" class="fchip" id="onlyReg" aria-pressed="false" title="Only skills with an exact skills.sh match">skills.sh</button>
+      </div>
+    </div>
+  </div>
+  <div id="tagbar"></div>
+</header>

@@ -1,0 +1,47 @@
+<div id="empty" hidden>
+  No skills match the current filters.<button id="reset">Reset filters</button>
+</div>
+<div id="loaderr">
+  <p>Couldn&rsquo;t load skills from the server.</p>
+  <button id="retry">Retry</button>
+  <p style="margin-top:14px"><code id="loaderrDetail"></code></p>
+</div>
+<div id="overlay">
+  <div id="drawer"></div>
+</div>
+<div id="confirm" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="panel">
+    <h3 id="confirmTitle">Confirm</h3>
+    <p class="msg" id="confirmMsg"></p>
+    <pre class="cmd" id="confirmCmd"></pre>
+    <div class="actions">
+      <button type="button" id="confirmCancel">Cancel</button>
+      <button type="button" id="confirmOk" class="primary">Confirm</button>
+    </div>
+  </div>
+</div>
+<div id="term" role="dialog" aria-modal="true" aria-labelledby="termTitle">
+  <div class="panel">
+    <div class="thead">
+      <h3 id="termTitle">Terminal</h3>
+      <div class="actions">
+        <button type="button" id="termKill" disabled>Stop</button>
+        <button type="button" id="termClose">Close</button>
+      </div>
+    </div>
+    <div class="tcmd" id="termCmd"></div>
+    <div class="topt">
+      <label title="Omit -y / --no-input and allocate a PTY so you can answer CLI prompts">
+        <input type="checkbox" id="termInteractive"> Interactive prompts
+      </label>
+    </div>
+    <div class="tlog" id="termLog" aria-live="polite"></div>
+    <div class="tfoot">
+      <input id="termInput" type="text" placeholder="Type a reply and press Enter…" autocomplete="off" disabled>
+      <div class="actions">
+        <button type="button" id="termStart" class="primary">Run</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="tip" role="tooltip"></div>
