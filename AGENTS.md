@@ -22,6 +22,8 @@ bun run fmt
 bun run fmt:check
 bun run build
 ./install.sh              # compile + install to ~/.local/bin/skiller
+# remote one-liner (from source): curl -fsSL https://raw.githubusercontent.com/ivrusson/skiller/main/install.sh | bash
+# prebuilt from CI:              curl -fsSL …/install.sh | bash -s -- --from-release
 bun run index.ts --help
 bun run --watch index.ts ui
 bun run release:context   # JSON for prepare-release skill

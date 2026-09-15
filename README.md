@@ -5,14 +5,12 @@ Inspect, explore, install, and track the **agent skills** on your machine.
 Skiller is a Bun CLI plus a local web UI. It finds every `SKILL.md` your harnesses already use, enriches them with registry metadata, and helps you decide what to keep, install, or remove.
 
 ```bash
-bun install
-./install.sh                   # compile + install to ~/.local/bin/skiller
-# or: bun link                 # run via Bun without a standalone binary
+curl -fsSL https://raw.githubusercontent.com/ivrusson/skiller/main/install.sh | bash
 skiller list
 skiller ui --open
 ```
 
-Requirements: [Bun](https://bun.sh) ≥ 1.1. Network is optional for local listing; Explore and download counts need the internet.
+Requirements: [Bun](https://bun.sh) ≥ 1.1 for source installs. Network is optional for local listing; Explore and download counts need the internet.
 
 ---
 
@@ -28,25 +26,66 @@ Everything runs locally under `~/.skiller`. Skiller never deletes skill folders 
 
 ---
 
-## Quick start
+## Install
+
+All paths put a `skiller` binary on your `PATH` (default: `~/.local/bin`). Override with `PREFIX=/usr/local`.
+
+### 1. One-liner from source (recommended)
+
+Clones the repo, compiles a native binary with Bun, installs it. No checkout left behind.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ivrusson/skiller/main/install.sh | bash
+```
+
+Needs `curl`, `git`, and [Bun](https://bun.sh). Pin a branch/tag with `SKILLER_REF`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ivrusson/skiller/main/install.sh | SKILLER_REF=v0.1.0 bash
+```
+
+### 2. Prebuilt binary from GitHub Releases
+
+Uses the artifacts published by CI when a `v*` tag is pushed (no local compile):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ivrusson/skiller/main/install.sh | bash -s -- --from-release
+```
+
+Needs `curl` only. Assets look like `skiller-darwin-arm64`, `skiller-linux-x64`, `skiller-windows-x64.exe`.
+
+### 3. From a git checkout
 
 ```bash
 git clone https://github.com/ivrusson/skiller.git
 cd skiller
-./install.sh                # bun install + compile → ~/.local/bin/skiller
-
-# Inventory
-skiller list
-skiller info hono
-
-# Web UI → http://127.0.0.1:4780
-skiller ui --open
-
-# Interactive menu (TTY)
-skiller wizard
+./install.sh                 # bun install + compile → ~/.local/bin/skiller
+./install.sh --build-only    # only write dist/skiller
+bun run build                # same compile step via package script
 ```
 
-Without installing a binary you can also `bun install && bun link`, or run `bun run index.ts …` directly.
+### 4. Development (run via Bun, no standalone binary)
+
+```bash
+git clone https://github.com/ivrusson/skiller.git
+cd skiller
+bun install
+bun link                     # optional: `skiller` on PATH → index.ts
+bun run index.ts list        # or: bun run index.ts ui --open
+```
+
+---
+
+## Quick start
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ivrusson/skiller/main/install.sh | bash
+
+skiller list
+skiller info hono
+skiller ui --open
+skiller wizard
+```
 
 ---
 
@@ -200,7 +239,10 @@ bun run --watch index.ts ui    # or: bun run dev
 2. Review the draft under `.releases/` (gitignored) — version, changelog, tag commands.
 3. Bump `"version"` in `package.json` if you agree, commit if desired.
 4. Push an annotated tag: `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`.
-5. GitHub Actions builds standalone binaries on native runners (OpenTUI ships per-OS natives; cross-compile from one OS is not reliable) and attaches them to the GitHub Release.
+5. GitHub Actions (`.github/workflows/release.yml`) builds standalone binaries on **native** runners and attaches them to the GitHub Release.
+6. Users can then install with either:
+   - **Source:** `curl …/install.sh | bash` (compiles locally)
+   - **Prebuilt:** `curl …/install.sh | bash -s -- --from-release`
 
 Layout:
 
