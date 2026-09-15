@@ -92,10 +92,16 @@ install_binary() {
   install -m 755 "$src" "$dest"
   echo "==> installed command: skiller → $dest"
 
-  if command -v skiller >/dev/null 2>&1; then
-    echo "==> ok: \`skiller\` is on your PATH ($(command -v skiller))"
+  local resolved=""
+  resolved="$(command -v skiller 2>/dev/null || true)"
+  if [[ "$resolved" == "$dest" ]]; then
+    echo "==> ok: \`skiller\` resolves on your PATH"
   else
     ensure_path_note
+    if [[ -n "$resolved" && "$resolved" != "$dest" ]]; then
+      echo "note: another \`skiller\` is first on PATH: $resolved"
+      echo "      put $BIN_DIR earlier in PATH, or remove the old one."
+    fi
   fi
 
   echo
