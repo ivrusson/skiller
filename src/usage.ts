@@ -72,7 +72,12 @@ export function logUsage(skillName: string, harness: string, sessionId: string):
   );
 }
 
-export function logUsageOnce(skillName: string, harness: string, sessionId: string, timestamp?: number): boolean {
+export function logUsageOnce(
+  skillName: string,
+  harness: string,
+  sessionId: string,
+  timestamp?: number,
+): boolean {
   const database = db();
   const existing = database
     .prepare("SELECT 1 FROM usage_events WHERE skill_name = ? AND harness = ? AND session_id = ?")
@@ -99,7 +104,16 @@ export function getUsageStats(): SkillStats[] {
     GROUP BY skill_name
     ORDER BY total DESC
   `);
-  const rows = Array.from(stmt.all() as { skill_name: string; total: number; unique_count: number; harnesses: string; last: number | null; first: number | null }[]);
+  const rows = Array.from(
+    stmt.all() as {
+      skill_name: string;
+      total: number;
+      unique_count: number;
+      harnesses: string;
+      last: number | null;
+      first: number | null;
+    }[],
+  );
 
   return rows.map((r) => ({
     skillName: r.skill_name,
@@ -127,7 +141,9 @@ export function getHarnessSummary(): HarnessStats[] {
     GROUP BY harness
     ORDER BY total DESC
   `);
-  const rows = Array.from(stmt.all() as { harness: string; total: number; unique_skills: number }[]);
+  const rows = Array.from(
+    stmt.all() as { harness: string; total: number; unique_skills: number }[],
+  );
 
   return rows.map((r) => ({
     harness: r.harness,
@@ -149,7 +165,9 @@ export function getUnusedSkills(daysThreshold = 90): CandidateForRemoval[] {
      HAVING last < ?
      ORDER BY last ASC
   `);
-  const rows = Array.from(stmt.all(threshold as any) as { skill_name: string; total: number; last: number | null }[]);
+  const rows = Array.from(
+    stmt.all(threshold as any) as { skill_name: string; total: number; last: number | null }[],
+  );
 
   return rows.map((r) => ({
     skillName: r.skill_name,

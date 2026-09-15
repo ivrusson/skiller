@@ -5,47 +5,94 @@ Inspect, explore, install, and track the **agent skills** on your machine.
 Skiller is a Bun CLI plus a local web UI. It finds every `SKILL.md` your harnesses already use, enriches them with registry metadata, and helps you decide what to keep, install, or remove.
 
 ```bash
-bun install
-bun link                    # optional: put `skiller` on your PATH
+curl -fsSL https://raw.githubusercontent.com/ivrusson/skiller/main/install.sh | bash
 skiller list
 skiller ui --open
 ```
 
-Requirements: [Bun](https://bun.sh) ≥ 1.1. Network is optional for local listing; Explore and download counts need the internet.
+Requirements: [Bun](https://bun.sh) ≥ 1.1 for source installs. Network is optional for local listing; Explore and download counts need the internet.
 
 ---
 
 ## What you get
 
-| Surface | Use it to |
-| --- | --- |
-| **CLI** | List/info, tags, explore, install/uninstall, usage analytics, OpenTUI wizards |
-| **Web UI** | Browse installed skills, search catalogs, install/uninstall with a live terminal |
-| **Usage DB** | See which skills Claude Code / Cursor (and friends) actually invoke |
+| Surface      | Use it to                                                                        |
+| ------------ | -------------------------------------------------------------------------------- |
+| **CLI**      | List/info, tags, explore, install/uninstall, usage analytics, OpenTUI wizards    |
+| **Web UI**   | Browse installed skills, search catalogs, install/uninstall with a live terminal |
+| **Usage DB** | See which skills Claude Code / Cursor (and friends) actually invoke              |
 
 Everything runs locally under `~/.skiller`. Skiller never deletes skill folders itself — install and uninstall always go through `npx skills` or `clawhub`.
+
+---
+
+## Install
+
+All paths put a `skiller` **command** on your `PATH` by installing the binary at `$PREFIX/bin/skiller` (default: `~/.local/bin/skiller`). After a successful install you run:
+
+```bash
+skiller --help
+skiller list
+```
+
+Override the install location with `PREFIX=/usr/local` (→ `/usr/local/bin/skiller`). If the installer warns that the bin dir is not on your `PATH`, add it to your shell profile and open a new terminal.
+
+### 1. One-liner from source (recommended)
+
+Clones the repo, compiles a native binary with Bun, installs it. No checkout left behind.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ivrusson/skiller/main/install.sh | bash
+```
+
+Needs `curl`, `git`, and [Bun](https://bun.sh). Pin a branch/tag with `SKILLER_REF`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ivrusson/skiller/main/install.sh | SKILLER_REF=v0.1.0 bash
+```
+
+### 2. Prebuilt binary from GitHub Releases
+
+Uses the artifacts published by CI when a `v*` tag is pushed (no local compile):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ivrusson/skiller/main/install.sh | bash -s -- --from-release
+```
+
+Needs `curl` only. Assets look like `skiller-darwin-arm64`, `skiller-linux-x64`, `skiller-windows-x64.exe`.
+
+### 3. From a git checkout
+
+```bash
+git clone https://github.com/ivrusson/skiller.git
+cd skiller
+./install.sh                 # bun install + compile → ~/.local/bin/skiller
+./install.sh --build-only    # only write dist/skiller
+bun run build                # same compile step via package script
+```
+
+### 4. Development (run via Bun, no standalone binary)
+
+```bash
+git clone https://github.com/ivrusson/skiller.git
+cd skiller
+bun install
+bun link                     # optional: `skiller` on PATH → index.ts
+bun run index.ts list        # or: bun run index.ts ui --open
+```
 
 ---
 
 ## Quick start
 
 ```bash
-git clone https://github.com/ivrusson/skiller.git
-cd skiller
-bun install
+curl -fsSL https://raw.githubusercontent.com/ivrusson/skiller/main/install.sh | bash
 
-# Inventory
-bun run index.ts list
-bun run index.ts info hono
-
-# Web UI → http://127.0.0.1:4780
-bun run index.ts ui --open
-
-# Interactive menu (TTY)
-bun run index.ts wizard
+skiller list
+skiller info hono
+skiller ui --open
+skiller wizard
 ```
-
-After `bun link`, you can call `skiller` instead of `bun run index.ts`.
 
 ---
 
@@ -185,8 +232,24 @@ skiller usage by-repo | by-owner | purge | db
 ```bash
 bun install
 bun test
+bun run lint
+bun run fmt:check
+bun run build              # → dist/skiller
+./install.sh               # build + install to ~/.local/bin (PREFIX=… to override)
+./install.sh --build-only  # compile only
 bun run --watch index.ts ui    # or: bun run dev
 ```
+
+### Releasing
+
+1. Ask an agent to **prepare a release** (uses `.cursor/skills/prepare-release`).
+2. Review the draft under `.releases/` (gitignored) — version, changelog, tag commands.
+3. Bump `"version"` in `package.json` if you agree, commit if desired.
+4. Push an annotated tag: `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`.
+5. GitHub Actions (`.github/workflows/release.yml`) builds standalone binaries on **native** runners and attaches them to the GitHub Release.
+6. Users can then install with either:
+   - **Source:** `curl …/install.sh | bash` (compiles locally)
+   - **Prebuilt:** `curl …/install.sh | bash -s -- --from-release`
 
 Layout:
 

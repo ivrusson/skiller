@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { extractHeadings, extractSummary, parseFrontmatter, scanSkill, type SkillSource } from "../src/scan";
+import {
+  extractHeadings,
+  extractSummary,
+  parseFrontmatter,
+  scanSkill,
+  type SkillSource,
+} from "../src/scan";
 
 describe("parseFrontmatter", () => {
   test("parsea name y description", () => {

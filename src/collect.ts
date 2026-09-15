@@ -26,7 +26,9 @@ function trustForInstalled(registry: RegistryMatch | null): TrustAssessment {
   });
 }
 
-export async function collect(opts: { refresh?: boolean; registry?: boolean } = {}): Promise<WithMeta[]> {
+export async function collect(
+  opts: { refresh?: boolean; registry?: boolean } = {},
+): Promise<WithMeta[]> {
   const skills = scanAll();
   const registry =
     opts.registry === false

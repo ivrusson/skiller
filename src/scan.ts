@@ -31,15 +31,21 @@ export function defaultSources(cwd = process.cwd()): SkillSource[] {
     { root: join(HOME, ".agents", "skills"), scope: "user", label: "~/.agents/skills" },
     { root: join(HOME, ".claude", "skills"), scope: "user", label: "~/.claude/skills" },
     { root: join(HOME, ".cursor", "skills"), scope: "user", label: "~/.cursor/skills" },
-    { root: join(HOME, ".config", "opencode", "skills"), scope: "user", label: "~/.config/opencode/skills" },
-    { root: join(HOME, ".config", "opencode", "skill"), scope: "user", label: "~/.config/opencode/skill" },
+    {
+      root: join(HOME, ".config", "opencode", "skills"),
+      scope: "user",
+      label: "~/.config/opencode/skills",
+    },
+    {
+      root: join(HOME, ".config", "opencode", "skill"),
+      scope: "user",
+      label: "~/.config/opencode/skill",
+    },
     { root: join(cwd, ".agents", "skills"), scope: "project", label: "./.agents/skills" },
     { root: join(cwd, ".claude", "skills"), scope: "project", label: "./.claude/skills" },
     { root: join(cwd, ".cursor", "skills"), scope: "project", label: "./.cursor/skills" },
   ];
-  return defs
-    .filter((d) => existsSync(d.root))
-    .map((d) => ({ ...d, root: resolve(d.root) }));
+  return defs.filter((d) => existsSync(d.root)).map((d) => ({ ...d, root: resolve(d.root) }));
 }
 
 export function parseFrontmatter(markdown: string): { data: Record<string, string>; body: string } {

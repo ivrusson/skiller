@@ -70,8 +70,10 @@ describe("ingestAll", () => {
   test("ignora paths que no son skills instalados", () => {
     writeFileSync(
       join(cursorDir, "proj", "agent-transcripts", "sess-1", "sess-1.jsonl"),
-      cursorReadLine("/Users/x/repo/packages/skills/src/index.ts") + "\n" +
-        cursorReadLine("/Users/x/.claude/skills/_shared/common.md") + "\n",
+      cursorReadLine("/Users/x/repo/packages/skills/src/index.ts") +
+        "\n" +
+        cursorReadLine("/Users/x/.claude/skills/_shared/common.md") +
+        "\n",
     );
     writeFileSync(join(claudeDir, "proj", "abc.jsonl"), claudeLine("no-existe") + "\n");
     const result = ingestAll({ claudeDir, cursorDir, ...opts });

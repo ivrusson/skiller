@@ -72,7 +72,9 @@ function toRemote(plugin: MarketplacePlugin, marketplaceRepo: string): RemoteSki
     url: pluginUrl(plugin, repo),
     provider: "marketplace",
     repo: repo ? (path && !plugin.homepage ? `${repo} (/${path})` : repo) : undefined,
-    tags: [...new Set([plugin.category, ...(plugin.keywords ?? [])].filter((t): t is string => !!t))],
+    tags: [
+      ...new Set([plugin.category, ...(plugin.keywords ?? [])].filter((t): t is string => !!t)),
+    ],
   };
 }
 
@@ -87,7 +89,9 @@ async function fetchMarketplace(repo: string, fetcher: Fetcher): Promise<RemoteS
 }
 
 async function syncCatalog(fetcher: Fetcher): Promise<RemoteSkill[]> {
-  const settled = await Promise.allSettled(DEFAULT_MARKETPLACES.map((r) => fetchMarketplace(r, fetcher)));
+  const settled = await Promise.allSettled(
+    DEFAULT_MARKETPLACES.map((r) => fetchMarketplace(r, fetcher)),
+  );
   const out: RemoteSkill[] = [];
   for (const r of settled) if (r.status === "fulfilled") out.push(...r.value);
   if (!out.length) throw new Error("no marketplace reachable");
@@ -95,8 +99,17 @@ async function syncCatalog(fetcher: Fetcher): Promise<RemoteSkill[]> {
 }
 
 function matches(skill: RemoteSkill, q: string): boolean {
-  const hay = (skill.name + " " + skill.description + " " + (skill.tags ?? []).join(" ")).toLowerCase();
-  return q.toLowerCase().split(/\s+/).every((t) => hay.includes(t));
+  const hay = (
+    skill.name +
+    " " +
+    skill.description +
+    " " +
+    (skill.tags ?? []).join(" ")
+  ).toLowerCase();
+  return q
+    .toLowerCase()
+    .split(/\s+/)
+    .every((t) => hay.includes(t));
 }
 
 export const marketplacesProvider: Provider = {

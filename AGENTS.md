@@ -17,27 +17,43 @@ Instructions for coding agents working in this repository.
 ```bash
 bun install
 bun test
+bun run lint
+bun run fmt
+bun run fmt:check
+bun run build
+./install.sh              # compile + install to ~/.local/bin/skiller
+# remote one-liner (from source): curl -fsSL https://raw.githubusercontent.com/ivrusson/skiller/main/install.sh | bash
+# prebuilt from CI:              curl -fsSL …/install.sh | bash -s -- --from-release
 bun run index.ts --help
 bun run --watch index.ts ui
+bun run release:context   # JSON for prepare-release skill
 ```
 
 Prefer `bun <file>`, `bun test`, `bun install`. Bun loads `.env` automatically — do not add dotenv.
 
+## Releases
+
+- Ask the agent to **prepare a release** (skill: `.cursor/skills/prepare-release`).
+- It runs `bun run release:context`, picks a semver bump, and writes `.releases/vX.Y.Z-<slug>.md`.
+- `.releases/` is gitignored — never commit those drafts.
+- After you review the draft: bump `package.json` version if needed, then `git tag -a vX.Y.Z && git push origin vX.Y.Z`.
+- Tag push runs `.github/workflows/release.yml` (quality + cross-compiled binaries on the GitHub Release).
+
 ## Layout
 
-| Path | Responsibility |
-| --- | --- |
-| `index.ts` | CLI router and help text |
-| `src/scan.ts` | Discover + parse `SKILL.md` |
-| `src/collect.ts` | Pipeline: scan → registry → tags → usage → trust → relations |
-| `src/registry.ts` | skills.sh cache |
-| `src/providers/` | Explore catalogs |
-| `src/install.ts` | Plan/run `npx skills` / `clawhub` (never delete skill dirs) |
-| `src/usage.ts` / `ingest.ts` | SQLite usage + transcript ingest |
-| `src/server.ts` | `Bun.serve` + `/ws/run` |
-| `src/web/` | Partials + `app.js` / `styles.css` |
-| `src/cli/` | OpenTUI wizards |
-| `src/paths.ts` | `~/.skiller` / `SKILLER_HOME` |
+| Path                         | Responsibility                                               |
+| ---------------------------- | ------------------------------------------------------------ |
+| `index.ts`                   | CLI router and help text                                     |
+| `src/scan.ts`                | Discover + parse `SKILL.md`                                  |
+| `src/collect.ts`             | Pipeline: scan → registry → tags → usage → trust → relations |
+| `src/registry.ts`            | skills.sh cache                                              |
+| `src/providers/`             | Explore catalogs                                             |
+| `src/install.ts`             | Plan/run `npx skills` / `clawhub` (never delete skill dirs)  |
+| `src/usage.ts` / `ingest.ts` | SQLite usage + transcript ingest                             |
+| `src/server.ts`              | `Bun.serve` + `/ws/run`                                      |
+| `src/web/`                   | Partials + `app.js` / `styles.css`                           |
+| `src/cli/`                   | OpenTUI wizards                                              |
+| `src/paths.ts`               | `~/.skiller` / `SKILLER_HOME`                                |
 
 Domain terms: [LEGENDS.md](./LEGENDS.md). User guide: [README.md](./README.md).
 
@@ -62,8 +78,9 @@ Domain terms: [LEGENDS.md](./LEGENDS.md). User guide: [README.md](./README.md).
 - README = humans (quick start + guide).
 - LEGENDS = glossary / architecture map.
 - AGENTS.md = this file (agent workflow).
-- Do not revive research checklists under `docs/` unless they describe *current* behaviour.
-- Do not commit screen recordings or `.cursor/` local tooling.
+- Do not revive research checklists under `docs/` unless they describe _current_ behaviour.
+- Do not commit screen recordings or other local editor noise.
+- Commit shared project skills under `.cursor/skills/`; other `.cursor/` paths stay gitignored.
 
 ## When changing behaviour
 

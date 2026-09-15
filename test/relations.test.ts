@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  buildRelations,
-  groupUsageByRelation,
-  normalizeRepo,
-  ownerOf,
-} from "../src/relations";
+import { buildRelations, groupUsageByRelation, normalizeRepo, ownerOf } from "../src/relations";
 import { ingestAll } from "../src/ingest";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -45,8 +40,18 @@ describe("groupUsageByRelation", () => {
     ]);
     const groups = groupUsageByRelation(
       [
-        { skillName: "hono", totalSessions: 3, uniqueSessions: 2, lastUsed: "2026-09-01T00:00:00.000Z" },
-        { skillName: "solo", totalSessions: 1, uniqueSessions: 1, lastUsed: "2026-08-01T00:00:00.000Z" },
+        {
+          skillName: "hono",
+          totalSessions: 3,
+          uniqueSessions: 2,
+          lastUsed: "2026-09-01T00:00:00.000Z",
+        },
+        {
+          skillName: "solo",
+          totalSessions: 1,
+          uniqueSessions: 1,
+          lastUsed: "2026-08-01T00:00:00.000Z",
+        },
       ],
       relations,
       "repo",

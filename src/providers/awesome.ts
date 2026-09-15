@@ -11,14 +11,23 @@ interface AwesomeSource {
 
 // Discovery indices maintained by the community. Format verified 2026-09-12.
 const SOURCES: AwesomeSource[] = [
-  { repo: "travisvn/awesome-claude-skills", raw: "https://raw.githubusercontent.com/travisvn/awesome-claude-skills/main/README.md", kind: "table" },
-  { repo: "hesreallyhim/awesome-claude-code", raw: "https://raw.githubusercontent.com/hesreallyhim/awesome-claude-code/main/README.md", kind: "list" },
+  {
+    repo: "travisvn/awesome-claude-skills",
+    raw: "https://raw.githubusercontent.com/travisvn/awesome-claude-skills/main/README.md",
+    kind: "table",
+  },
+  {
+    repo: "hesreallyhim/awesome-claude-code",
+    raw: "https://raw.githubusercontent.com/hesreallyhim/awesome-claude-code/main/README.md",
+    kind: "list",
+  },
 ];
 
 // | **[name](https://github.com/o/r)** | description |
 const TABLE_RE = /\|\s*\*\*\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)\*\*\s*\|([^|]*)\|/;
 // - [Name](https://github.com/o/r) by [Author](...) - description
-const LIST_RE = /^-\s*\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)\s*(?:by\s*\[[^\]]+\]\([^)]*\)\s*)?[-–—:]?\s*(.*)$/;
+const LIST_RE =
+  /^-\s*\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)\s*(?:by\s*\[[^\]]+\]\([^)]*\)\s*)?[-–—:]?\s*(.*)$/;
 
 function parseTable(markdown: string): RemoteSkill[] {
   const out: RemoteSkill[] = [];
@@ -73,7 +82,10 @@ async function syncCatalog(fetcher: Fetcher): Promise<RemoteSkill[]> {
 
 function matches(skill: RemoteSkill, q: string): boolean {
   const hay = (skill.name + " " + skill.description).toLowerCase();
-  return q.toLowerCase().split(/\s+/).every((t) => hay.includes(t));
+  return q
+    .toLowerCase()
+    .split(/\s+/)
+    .every((t) => hay.includes(t));
 }
 
 export const awesomeProvider: Provider = {

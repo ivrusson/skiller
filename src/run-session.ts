@@ -26,7 +26,7 @@ export function startLiveRun(
   },
 ): LiveRun {
   const timeoutMs = opts.timeoutMs ?? 300_000;
-  const { argv, displayArgv } = wrapForTty(spec.argv, !!opts.interactive);
+  const { argv } = wrapForTty(spec.argv, !!opts.interactive);
 
   const proc = Bun.spawn(argv, {
     stdin: "pipe",
@@ -101,7 +101,10 @@ export function startLiveRun(
   };
 }
 
-function wrapForTty(argv: string[], interactive: boolean): { argv: string[]; displayArgv: string[] } {
+function wrapForTty(
+  argv: string[],
+  interactive: boolean,
+): { argv: string[]; displayArgv: string[] } {
   if (!interactive || process.platform === "win32") {
     return { argv, displayArgv: argv };
   }

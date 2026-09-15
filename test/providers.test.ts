@@ -39,7 +39,15 @@ describe("skillsShProvider", () => {
   test("mapea resultados crudos a RemoteSkill", async () => {
     const f = fetcherByUrl({
       [api("hono")]: {
-        skills: [{ id: "vercel/hono", skillId: "hono", name: "hono", installs: 1200, source: "vercel/hono" }],
+        skills: [
+          {
+            id: "vercel/hono",
+            skillId: "hono",
+            name: "hono",
+            installs: 1200,
+            source: "vercel/hono",
+          },
+        ],
       },
     });
     const results = await skillsShProvider.search("hono", f);
@@ -54,7 +62,11 @@ describe("skillsShProvider", () => {
   });
 
   test("usa la caché en la segunda búsqueda del mismo término", async () => {
-    const f = fetcherByUrl({ [api("react")]: { skills: [{ id: "o/r", skillId: "react", name: "react", installs: 5, source: "o/r" }] } });
+    const f = fetcherByUrl({
+      [api("react")]: {
+        skills: [{ id: "o/r", skillId: "react", name: "react", installs: 5, source: "o/r" }],
+      },
+    });
     await skillsShProvider.search("react", f);
     const results = await skillsShProvider.search("react", async () => jsonResponse({}, false));
     expect(results).toHaveLength(1);
@@ -63,15 +75,25 @@ describe("skillsShProvider", () => {
 });
 
 describe("marketplacesProvider", () => {
-  const raw = (repo: string) => `https://raw.githubusercontent.com/${repo}/HEAD/.claude-plugin/marketplace.json`;
+  const raw = (repo: string) =>
+    `https://raw.githubusercontent.com/${repo}/HEAD/.claude-plugin/marketplace.json`;
 
   test("parsea plugins de un marketplace.json", async () => {
     const f = fetcherByUrl({
       [raw("anthropics/claude-plugins-official")]: {
         name: "official",
         plugins: [
-          { name: "plugin-a", description: "Does A", keywords: ["testing", "ci"], source: "./plugins/a" },
-          { name: "plugin-b", description: "Does B", source: { source: "github", repo: "someone/b" } },
+          {
+            name: "plugin-a",
+            description: "Does A",
+            keywords: ["testing", "ci"],
+            source: "./plugins/a",
+          },
+          {
+            name: "plugin-b",
+            description: "Does B",
+            source: { source: "github", repo: "someone/b" },
+          },
         ],
       },
       [raw("alirezarezvani/claude-skills")]: {},
@@ -93,11 +115,15 @@ describe("explore", () => {
   test("deduplica por repo y marca instalados", async () => {
     const f = async (url: string): Promise<Response> => {
       if (url.startsWith("https://skills.sh/")) {
-        return jsonResponse({ skills: [{ id: "o/hono", skillId: "hono", name: "hono", installs: 10, source: "o/hono" }] });
+        return jsonResponse({
+          skills: [{ id: "o/hono", skillId: "hono", name: "hono", installs: 10, source: "o/hono" }],
+        });
       }
       return jsonResponse({
         name: "m",
-        plugins: [{ name: "hono", description: "same repo", source: { source: "github", repo: "o/hono" } }],
+        plugins: [
+          { name: "hono", description: "same repo", source: { source: "github", repo: "o/hono" } },
+        ],
       });
     };
     const { providers } = await import("../src/providers");
@@ -157,13 +183,30 @@ describe("skillsMpProvider", () => {
     const pages: Record<string, unknown> = {
       "https://skillsmp.com/api/skills?page=1": {
         skills: [
-          { name: "react-patterns", description: "React hooks guidance", githubUrl: "https://github.com/o/react-patterns", stars: 40 },
-          { name: "vue-helper", description: "Vue stuff", githubUrl: "https://github.com/o/vue", stars: 3 },
+          {
+            name: "react-patterns",
+            description: "React hooks guidance",
+            githubUrl: "https://github.com/o/react-patterns",
+            stars: 40,
+          },
+          {
+            name: "vue-helper",
+            description: "Vue stuff",
+            githubUrl: "https://github.com/o/vue",
+            stars: 3,
+          },
         ],
         pagination: { page: 1, totalPages: 2 },
       },
       "https://skillsmp.com/api/skills?page=2": {
-        skills: [{ name: "react-server", description: "SSR", route: { ownerSlug: "o", repoSlug: "react-server" }, stars: 7 }],
+        skills: [
+          {
+            name: "react-server",
+            description: "SSR",
+            route: { ownerSlug: "o", repoSlug: "react-server" },
+            stars: 7,
+          },
+        ],
         pagination: { page: 2, totalPages: 2 },
       },
     };
@@ -183,8 +226,10 @@ describe("skillsMpProvider", () => {
 describe("awesomeProvider", () => {
   test("parsea tabla markdown (travisvn) y lista (hesreallyhim)", async () => {
     const { awesomeProvider } = await import("../src/providers/awesome");
-    const table = "# list\n\n| **[ios-simulator-skill](https://github.com/conorluddy/ios-simulator-skill)** | Build iOS apps |\n| not-a-row |\n";
-    const list = "## Skills\n\n- [Caveman](https://github.com/JuliusBrussee/caveman) by [Julius Brussee](https://github.com/x) - A plugin that conserves tokens\n<img src=\"badge\">\n- [NoDesc](https://github.com/a/b)\n";
+    const table =
+      "# list\n\n| **[ios-simulator-skill](https://github.com/conorluddy/ios-simulator-skill)** | Build iOS apps |\n| not-a-row |\n";
+    const list =
+      '## Skills\n\n- [Caveman](https://github.com/JuliusBrussee/caveman) by [Julius Brussee](https://github.com/x) - A plugin that conserves tokens\n<img src="badge">\n- [NoDesc](https://github.com/a/b)\n';
     const f = async (url: string) => {
       if (url.includes("travisvn")) return new Response(table);
       if (url.includes("hesreallyhim")) return new Response(list);
@@ -192,7 +237,11 @@ describe("awesomeProvider", () => {
     };
     const ios = await awesomeProvider.search("ios-simulator", f);
     expect(ios).toHaveLength(1);
-    expect(ios[0]!).toMatchObject({ name: "ios-simulator-skill", repo: "conorluddy/ios-simulator-skill", description: "Build iOS apps" });
+    expect(ios[0]!).toMatchObject({
+      name: "ios-simulator-skill",
+      repo: "conorluddy/ios-simulator-skill",
+      description: "Build iOS apps",
+    });
     const cave = await awesomeProvider.search("caveman", f);
     expect(cave[0]!.description).toContain("conserves tokens");
     const all = await awesomeProvider.search("", f);
@@ -217,7 +266,10 @@ describe("clawhubProvider", () => {
 });
 
 describe("explore dedup and ranking (F4)", () => {
-  async function withMockedProviders(resultsByProvider: Record<string, RemoteSkill[]>, fn: () => Promise<void>) {
+  async function withMockedProviders(
+    resultsByProvider: Record<string, RemoteSkill[]>,
+    fn: () => Promise<void>,
+  ) {
     const { providers } = await import("../src/providers");
     const originals = providers.map((p) => [p, p.search] as const);
     for (const p of providers) {
@@ -233,53 +285,99 @@ describe("explore dedup and ranking (F4)", () => {
 
   test("merge fuzzy: mismo nombre normalizado con repo basename distinto en owner", async () => {
     const { explore } = await import("../src/providers");
-    await withMockedProviders({
-      "skills-sh": [{ name: "code-review", description: "", url: "", provider: "skills.sh", repo: "acme/code-review", installs: 100 }],
-      marketplace: [{ name: "claude-code-review", description: "", url: "", provider: "marketplace", repo: "other/code-review" }],
-      skillsmp: [{ name: "telegram-bot", description: "", url: "", provider: "skillsmp", repo: "x/telegram-bot" }],
-    }, async () => {
-      const out = await explore("review");
-      const names = out.map((o) => o.name);
-      expect(names).toContain("code-review");
-      expect(names).not.toContain("claude-code-review");
-      const merged = out.find((o) => o.name === "code-review")!;
-      expect(merged.provider).toContain("skills.sh");
-      expect(merged.provider).toContain("marketplace");
-      expect(merged.installs).toBe(100);
-    });
+    await withMockedProviders(
+      {
+        "skills-sh": [
+          {
+            name: "code-review",
+            description: "",
+            url: "",
+            provider: "skills.sh",
+            repo: "acme/code-review",
+            installs: 100,
+          },
+        ],
+        marketplace: [
+          {
+            name: "claude-code-review",
+            description: "",
+            url: "",
+            provider: "marketplace",
+            repo: "other/code-review",
+          },
+        ],
+        skillsmp: [
+          {
+            name: "telegram-bot",
+            description: "",
+            url: "",
+            provider: "skillsmp",
+            repo: "x/telegram-bot",
+          },
+        ],
+      },
+      async () => {
+        const out = await explore("review");
+        const names = out.map((o) => o.name);
+        expect(names).toContain("code-review");
+        expect(names).not.toContain("claude-code-review");
+        const merged = out.find((o) => o.name === "code-review")!;
+        expect(merged.provider).toContain("skills.sh");
+        expect(merged.provider).toContain("marketplace");
+        expect(merged.installs).toBe(100);
+      },
+    );
   });
 
   test("no mergea si el basename del repo difiere", async () => {
     const { explore } = await import("../src/providers");
-    await withMockedProviders({
-      "skills-sh": [{ name: "hono", description: "", url: "", provider: "skills.sh", repo: "a/hono" }],
-      skillsmp: [{ name: "hono", description: "", url: "", provider: "skillsmp", repo: "b/hono-api" }],
-    }, async () => {
-      const out = await explore("hono");
-      expect(out).toHaveLength(2);
-    });
+    await withMockedProviders(
+      {
+        "skills-sh": [
+          { name: "hono", description: "", url: "", provider: "skills.sh", repo: "a/hono" },
+        ],
+        skillsmp: [
+          { name: "hono", description: "", url: "", provider: "skillsmp", repo: "b/hono-api" },
+        ],
+      },
+      async () => {
+        const out = await explore("hono");
+        expect(out).toHaveLength(2);
+      },
+    );
   });
 
   test("ranking: installs dominan, stars desempatan con peso 1/50", async () => {
     const { explore } = await import("../src/providers");
-    await withMockedProviders({
-      "skills-sh": [
-        { name: "low", description: "", url: "", provider: "skills.sh", installs: 100 },
-        { name: "starred", description: "", url: "", provider: "skills.sh", installs: 100, stars: 1000 },
-        { name: "top", description: "", url: "", provider: "skills.sh", installs: 500 },
-      ],
-    }, async () => {
-      const out = await explore("x");
-      expect(out.map((o) => o.name)).toEqual(["top", "starred", "low"]);
-      expect(out[0]!.score).toBe(500);
-      expect(out[1]!.score).toBe(120);
-    });
+    await withMockedProviders(
+      {
+        "skills-sh": [
+          { name: "low", description: "", url: "", provider: "skills.sh", installs: 100 },
+          {
+            name: "starred",
+            description: "",
+            url: "",
+            provider: "skills.sh",
+            installs: 100,
+            stars: 1000,
+          },
+          { name: "top", description: "", url: "", provider: "skills.sh", installs: 500 },
+        ],
+      },
+      async () => {
+        const out = await explore("x");
+        expect(out.map((o) => o.name)).toEqual(["top", "starred", "low"]);
+        expect(out[0]!.score).toBe(500);
+        expect(out[1]!.score).toBe(120);
+      },
+    );
   });
 });
 
 describe("provider cache refresh", () => {
   test("clearProviderCaches borra catálogos y providerCacheInfo los lista", async () => {
-    const { writeCache, clearProviderCaches, providerCacheInfo } = await import("../src/providers/cache");
+    const { writeCache, clearProviderCaches, providerCacheInfo } =
+      await import("../src/providers/cache");
     writeCache("marketplace", [1, 2]);
     writeCache("awesome", [1]);
     let info = providerCacheInfo();
@@ -315,7 +413,16 @@ describe("assessTrust", () => {
     for (const p of providers) {
       p.search = (async () =>
         p.id === "skills-sh"
-          ? [{ name: "hono", description: "x", url: "https://skills.sh/vercel/hono", provider: "skills.sh", repo: "vercel/hono", installs: 2000 }]
+          ? [
+              {
+                name: "hono",
+                description: "x",
+                url: "https://skills.sh/vercel/hono",
+                provider: "skills.sh",
+                repo: "vercel/hono",
+                installs: 2000,
+              },
+            ]
           : []) as typeof p.search;
     }
     try {

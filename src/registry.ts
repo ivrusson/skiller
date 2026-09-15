@@ -116,7 +116,9 @@ export async function enrich(
       }
       done++;
       if (process.env.SKILLER_VERBOSE) {
-        console.error(`[registry] ${done}/${missing.length} ${name}${match === undefined ? " (kept cache)" : ""}`);
+        console.error(
+          `[registry] ${done}/${missing.length} ${name}${match === undefined ? " (kept cache)" : ""}`,
+        );
       }
     });
     if (wrote > 0) {

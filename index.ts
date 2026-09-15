@@ -2,7 +2,14 @@
 import { collect, type WithMeta } from "./src/collect";
 import { addTags, removeTags, tagCounts } from "./src/tags";
 import { startServer } from "./src/server";
-import { getUsageStats, getHarnessSummary, getUnusedSkills, purgeUsage, logUsage, usageDbPath } from "./src/usage";
+import {
+  getUsageStats,
+  getHarnessSummary,
+  getUnusedSkills,
+  purgeUsage,
+  logUsage,
+  usageDbPath,
+} from "./src/usage";
 
 const args = process.argv.slice(2);
 if (args[0] === "--help" || args[0] === "-h" || args[0] === "help") {
@@ -58,7 +65,13 @@ const positional = rest.filter((a) => !a.startsWith("--"));
 
 async function collectFlagged(): Promise<WithMeta[]> {
   const rows = await collect({ refresh: !!f.refresh, registry: !f["no-registry"] });
-  const tagFilter = typeof f.tag === "string" ? f.tag.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean) : [];
+  const tagFilter =
+    typeof f.tag === "string"
+      ? f.tag
+          .split(",")
+          .map((t) => t.trim().toLowerCase())
+          .filter(Boolean)
+      : [];
   if (!tagFilter.length) return rows;
   return rows.filter((r) => tagFilter.every((t) => r.tags.some((x) => x.toLowerCase() === t)));
 }
@@ -86,7 +99,14 @@ function renderTable(rows: WithMeta[]): void {
   console.log(line("─".repeat(wName), "─".repeat(wScope), "─".repeat(wInst), "─".repeat(wDesc)));
   for (const r of rows) {
     const desc = truncate(r.description || r.summary, wDesc);
-    console.log(line(truncate(r.name, wName), truncate(r.source, wScope), fmtInstalls(r.registry?.installs), desc));
+    console.log(
+      line(
+        truncate(r.name, wName),
+        truncate(r.source, wScope),
+        fmtInstalls(r.registry?.installs),
+        desc,
+      ),
+    );
   }
   const withReg = rows.filter((r) => r.registry).length;
   console.log(`\n${rows.length} skills · ${withReg} found on skills.sh`);
@@ -103,23 +123,35 @@ function renderInfo(skill: WithMeta, siblings: WithMeta[]): void {
     console.log(`location    : ${skill.source}`);
   }
   console.log(`path        : ${skill.path}`);
-  console.log(`files       : ${skill.files} · ${skill.sizeKb} KB SKILL.md · modified ${skill.modified}`);
-  const tagList = skill.tags.length ? skill.tags.join(", ") : `(no tags — add with: skiller tag ${skill.name} <tag>)`;
+  console.log(
+    `files       : ${skill.files} · ${skill.sizeKb} KB SKILL.md · modified ${skill.modified}`,
+  );
+  const tagList = skill.tags.length
+    ? skill.tags.join(", ")
+    : `(no tags — add with: skiller tag ${skill.name} <tag>)`;
   console.log(`tags        : ${tagList}`);
   if (skill.registry) {
-    console.log(`skills.sh   : ${fmtInstalls(skill.registry.installs)} installs · ${skill.registry.id}`);
+    console.log(
+      `skills.sh   : ${fmtInstalls(skill.registry.installs)} installs · ${skill.registry.id}`,
+    );
     console.log(`             ${skill.registry.url}`);
   } else {
     console.log("skills.sh   : no exact match in the registry");
   }
   if (skill.related?.repo || skill.related?.siblings?.length) {
     if (skill.related.repo) console.log(`repo        : ${skill.related.repo}`);
-    if (skill.related.siblings.length) console.log(`same repo   : ${skill.related.siblings.join(", ")}`);
-    if (skill.related.sameOwner.length && skill.related.sameOwner.length !== skill.related.siblings.length) {
+    if (skill.related.siblings.length)
+      console.log(`same repo   : ${skill.related.siblings.join(", ")}`);
+    if (
+      skill.related.sameOwner.length &&
+      skill.related.sameOwner.length !== skill.related.siblings.length
+    ) {
       console.log(`same owner  : ${skill.related.sameOwner.join(", ")}`);
     }
   }
-  const extra = Object.entries(skill.frontmatter).filter(([k]) => !["name", "description"].includes(k));
+  const extra = Object.entries(skill.frontmatter).filter(
+    ([k]) => !["name", "description"].includes(k),
+  );
   if (extra.length) {
     console.log("\nextra frontmatter:");
     for (const [k, v] of extra) console.log(`  ${k}: ${truncate(v, 120)}`);
@@ -172,9 +204,14 @@ async function runExplore(q: string): Promise<void> {
   for (const r of results) {
     const flag = r.installed ? "✓" : " ";
     const meta =
-      r.installs != null ? fmtInstalls(r.installs) + " installs" :
-      r.stars != null ? fmtInstalls(r.stars) + " stars" : "";
-    console.log(`${flag} ${truncate(r.name, wName).padEnd(wName)}  ${r.provider.padEnd(wProv)}  ${meta.padStart(14)}  ${truncate(r.description, 90)}`);
+      r.installs != null
+        ? fmtInstalls(r.installs) + " installs"
+        : r.stars != null
+          ? fmtInstalls(r.stars) + " stars"
+          : "";
+    console.log(
+      `${flag} ${truncate(r.name, wName).padEnd(wName)}  ${r.provider.padEnd(wProv)}  ${meta.padStart(14)}  ${truncate(r.description, 90)}`,
+    );
   }
   console.log(`\n${results.length} result(s) — install with: skiller install <owner/repo>`);
 }
@@ -191,7 +228,11 @@ async function runInstall(opts: { repo: string; provider?: string }): Promise<vo
   console.log(`installed via ${result.command}`);
 }
 
-async function runUninstall(opts: { name: string; provider?: string; repo?: string }): Promise<void> {
+async function runUninstall(opts: {
+  name: string;
+  provider?: string;
+  repo?: string;
+}): Promise<void> {
   const { uninstallSkill } = await import("./src/install");
   const result = await uninstallSkill(opts);
   if (result.stdout) console.log(result.stdout);
@@ -225,7 +266,9 @@ async function main(): Promise<void> {
         console.error(`skill "${positional[0]}" not found`);
         process.exit(1);
       }
-      const matches = rows.filter((r) => r.name.toLowerCase() === String(positional[0]).toLowerCase());
+      const matches = rows.filter(
+        (r) => r.name.toLowerCase() === String(positional[0]).toLowerCase(),
+      );
       if (f.json) {
         console.log(JSON.stringify({ ...first, all: matches }, null, 2));
       } else {
@@ -269,7 +312,9 @@ async function main(): Promise<void> {
       }
       const w = Math.max(...entries.map(([t]) => t.length));
       for (const [tag, count] of entries) {
-        console.log(`${tag.padEnd(w)}  ${String(count).padStart(3)} skill${count === 1 ? "" : "s"}`);
+        console.log(
+          `${tag.padEnd(w)}  ${String(count).padStart(3)} skill${count === 1 ? "" : "s"}`,
+        );
       }
       break;
     }
@@ -343,15 +388,21 @@ async function main(): Promise<void> {
       } else if (choice.action === "usage") {
         const stats = getUsageStats();
         if (!stats.length) {
-          console.log("no usage recorded yet — log sessions with: skiller usage log <skill> <harness>");
+          console.log(
+            "no usage recorded yet — log sessions with: skiller usage log <skill> <harness>",
+          );
         } else {
           const w1 = Math.max(...stats.map((s) => s.skillName.length));
           const w2 = Math.max(...stats.map((s) => String(s.totalSessions).length));
           const w3 = Math.max(...stats.map((s) => String(s.uniqueSessions).length));
-          console.log(`${"SKILL".padEnd(w1)}  ${"SESSIONS".padStart(w2)}  ${"UNIQUE".padStart(w3)}  LAST USED  HARNESS`);
+          console.log(
+            `${"SKILL".padEnd(w1)}  ${"SESSIONS".padStart(w2)}  ${"UNIQUE".padStart(w3)}  LAST USED  HARNESS`,
+          );
           for (const s of stats) {
             const last = s.lastUsed ? new Date(s.lastUsed).toLocaleDateString() : "never";
-            console.log(`${s.skillName.padEnd(w1)}  ${String(s.totalSessions).padStart(w2)}  ${String(s.uniqueSessions).padStart(w3)}  ${last.padStart(10)}  ${s.harnesses.join(", ")}`);
+            console.log(
+              `${s.skillName.padEnd(w1)}  ${String(s.totalSessions).padStart(w2)}  ${String(s.uniqueSessions).padStart(w3)}  ${last.padStart(10)}  ${s.harnesses.join(", ")}`,
+            );
           }
         }
       } else if (choice.action === "home") {
@@ -376,13 +427,17 @@ async function main(): Promise<void> {
       const info = cacheInfo();
       console.log(info.exists ? `cache: ${info.path}` : "no cache yet");
       if (info.exists) {
-        console.log(`entries: ${info.entries} · updated: ${new Date(info.updatedAt).toLocaleString()}`);
+        console.log(
+          `entries: ${info.entries} · updated: ${new Date(info.updatedAt).toLocaleString()}`,
+        );
       }
       const pc = providerCacheInfo();
       if (pc.length) {
         console.log("\nprovider catalogs:");
         for (const p of pc) {
-          console.log(`  ${p.id.padEnd(12)} ${String(p.entries).padStart(5)} entries · updated ${new Date(p.updatedAt).toLocaleString()}`);
+          console.log(
+            `  ${p.id.padEnd(12)} ${String(p.entries).padStart(5)} entries · updated ${new Date(p.updatedAt).toLocaleString()}`,
+          );
         }
       }
       break;
@@ -411,12 +466,16 @@ async function main(): Promise<void> {
       } else if (sub === "harness") {
         const summary = getHarnessSummary();
         if (!summary.length) {
-          console.log("no usage recorded yet — log sessions with: skiller usage log <skill> <harness>");
+          console.log(
+            "no usage recorded yet — log sessions with: skiller usage log <skill> <harness>",
+          );
           break;
         }
         const w1 = Math.max(...summary.map((s) => s.harness.length));
         for (const s of summary) {
-          console.log(`${s.harness.padEnd(w1)}  sessions: ${String(s.totalSessions).padStart(4)}  skills: ${s.uniqueSkills}`);
+          console.log(
+            `${s.harness.padEnd(w1)}  sessions: ${String(s.totalSessions).padStart(4)}  skills: ${s.uniqueSkills}`,
+          );
         }
       } else if (sub === "unused") {
         const days = f.days ? Number(f.days) : 90;
@@ -428,7 +487,9 @@ async function main(): Promise<void> {
         console.log(`skills unused in ${days} days:\n`);
         const w = Math.max(...candidates.map((c) => c.skillName.length));
         for (const c of candidates) {
-          console.log(`${c.skillName.padEnd(w)}  sessions: ${String(c.totalSessions).padStart(3)}  last used: ${c.lastUsed ?? "never"} (${c.daysSinceLastUse ?? "?"}d ago)`);
+          console.log(
+            `${c.skillName.padEnd(w)}  sessions: ${String(c.totalSessions).padStart(3)}  last used: ${c.lastUsed ?? "never"} (${c.daysSinceLastUse ?? "?"}d ago)`,
+          );
         }
       } else if (sub === "purge") {
         const days = f.days ? Number(f.days) : 365;
@@ -446,7 +507,9 @@ async function main(): Promise<void> {
         const relations = buildRelations(names.map((name) => ({ name, source: sources[name] })));
         const groups = groupUsageByRelation(getUsageStats(), relations, kind, names);
         if (!groups.length) {
-          console.log(`no ${kind} groups yet — skills need a skills.sh source (owner/repo) and usage data`);
+          console.log(
+            `no ${kind} groups yet — skills need a skills.sh source (owner/repo) and usage data`,
+          );
           break;
         }
         for (const g of groups) {
@@ -460,7 +523,9 @@ async function main(): Promise<void> {
       } else if (sub === "ingest") {
         const { ingestAll } = await import("./src/ingest");
         const result = ingestAll();
-        console.log(`scanned ${result.scannedFiles} transcript file(s), added ${result.added} session(s)`);
+        console.log(
+          `scanned ${result.scannedFiles} transcript file(s), added ${result.added} session(s)`,
+        );
         for (const [harness, n] of Object.entries(result.byHarness)) {
           console.log(`  ${harness}: +${n}`);
         }
@@ -484,17 +549,25 @@ async function main(): Promise<void> {
       } else {
         const stats = getUsageStats();
         if (!stats.length) {
-          console.log("no usage recorded yet — log sessions with: skiller usage log <skill> <harness>");
+          console.log(
+            "no usage recorded yet — log sessions with: skiller usage log <skill> <harness>",
+          );
           break;
         }
         const w1 = Math.max(...stats.map((s) => s.skillName.length));
         const w2 = Math.max(...stats.map((s) => String(s.totalSessions).length));
         const w3 = Math.max(...stats.map((s) => String(s.uniqueSessions).length));
-        console.log(`${"SKILL".padEnd(w1)}  ${"SESSIONS".padStart(w2)}  ${"UNIQUE".padStart(w3)}  LAST USED  HARNESS`);
-        console.log(`${"─".repeat(w1)}  ${"─".repeat(w2)}  ${"─".repeat(w3)}  ${"─".repeat(10)}  ${"─".repeat(12)}`);
+        console.log(
+          `${"SKILL".padEnd(w1)}  ${"SESSIONS".padStart(w2)}  ${"UNIQUE".padStart(w3)}  LAST USED  HARNESS`,
+        );
+        console.log(
+          `${"─".repeat(w1)}  ${"─".repeat(w2)}  ${"─".repeat(w3)}  ${"─".repeat(10)}  ${"─".repeat(12)}`,
+        );
         for (const s of stats) {
           const last = s.lastUsed ? new Date(s.lastUsed).toLocaleDateString() : "never";
-          console.log(`${s.skillName.padEnd(w1)}  ${String(s.totalSessions).padStart(w2)}  ${String(s.uniqueSessions).padStart(w3)}  ${last.padStart(10)}  ${s.harnesses.join(", ")}`);
+          console.log(
+            `${s.skillName.padEnd(w1)}  ${String(s.totalSessions).padStart(w2)}  ${String(s.uniqueSessions).padStart(w3)}  ${last.padStart(10)}  ${s.harnesses.join(", ")}`,
+          );
         }
       }
       break;

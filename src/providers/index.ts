@@ -15,7 +15,13 @@ export { DEFAULT_MARKETPLACES, marketplacesProvider } from "./marketplaces";
 export { skillsMpProvider } from "./skillsmp";
 export { skillsShProvider } from "./skills-sh";
 
-export const providers: Provider[] = [skillsShProvider, marketplacesProvider, skillsMpProvider, awesomeProvider, clawhubProvider];
+export const providers: Provider[] = [
+  skillsShProvider,
+  marketplacesProvider,
+  skillsMpProvider,
+  awesomeProvider,
+  clawhubProvider,
+];
 
 export interface ExploreResult extends RemoteSkill {
   installed?: boolean;
@@ -28,7 +34,9 @@ const PROVIDER_TIMEOUT_MS = 25_000;
 function withTimeout(p: Promise<RemoteSkill[]>): Promise<RemoteSkill[]> {
   return Promise.race([
     p,
-    new Promise<RemoteSkill[]>((_, reject) => setTimeout(() => reject(new Error("provider timeout")), PROVIDER_TIMEOUT_MS)),
+    new Promise<RemoteSkill[]>((_, reject) =>
+      setTimeout(() => reject(new Error("provider timeout")), PROVIDER_TIMEOUT_MS),
+    ),
   ]);
 }
 
@@ -65,7 +73,11 @@ function betterName(current: string, candidate: string, repo?: string): string {
     if (candN === base && curN !== base) return candidate;
     if (curN === base) return current;
   }
-  const strip = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const strip = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
   const curRaw = strip(current);
   const candRaw = strip(candidate);
   // Prefer the name that didn't need a prefix stripped
@@ -94,7 +106,10 @@ function mergeInto(target: ExploreResult, source: RemoteSkill): void {
   target.name = betterName(target.name, source.name, target.repo ?? source.repo);
 }
 
-export async function explore(query: string, opts: { installedNames?: string[] } = {}): Promise<ExploreResult[]> {
+export async function explore(
+  query: string,
+  opts: { installedNames?: string[] } = {},
+): Promise<ExploreResult[]> {
   const settled = await Promise.allSettled(providers.map((p) => withTimeout(p.search(query))));
   const out: ExploreResult[] = [];
 
