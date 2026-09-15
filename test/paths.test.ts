@@ -67,9 +67,15 @@ describe("migrateLegacyData", () => {
     mkdirSync(join(config, "skiller"), { recursive: true });
     mkdirSync(join(cache, "skiller", "providers"), { recursive: true });
     writeFileSync(join(config, "skiller", "tags.json"), JSON.stringify({ hono: ["x"] }));
-    writeFileSync(join(cache, "skiller", "registry.json"), JSON.stringify({ updatedAt: 1, entries: {} }));
+    writeFileSync(
+      join(cache, "skiller", "registry.json"),
+      JSON.stringify({ updatedAt: 1, entries: {} }),
+    );
     writeFileSync(join(cache, "skiller", "usage.db"), "sqlite");
-    writeFileSync(join(cache, "skiller", "providers", "skills-sh.json"), JSON.stringify({ updatedAt: 1, data: [] }));
+    writeFileSync(
+      join(cache, "skiller", "providers", "skills-sh.json"),
+      JSON.stringify({ updatedAt: 1, data: [] }),
+    );
 
     migrateLegacyData();
 

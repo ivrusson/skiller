@@ -3,7 +3,17 @@ import { Database } from "bun:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { logUsage, logUsageOnce, getUsageStats, getSkillUsage, getHarnessSummary, getUnusedSkills, purgeUsage, resetDb, usageDbPath } from "../src/usage";
+import {
+  logUsage,
+  logUsageOnce,
+  getUsageStats,
+  getSkillUsage,
+  getHarnessSummary,
+  getUnusedSkills,
+  purgeUsage,
+  resetDb,
+  usageDbPath,
+} from "../src/usage";
 import { resetPathsState } from "../src/paths";
 
 let dir: string;

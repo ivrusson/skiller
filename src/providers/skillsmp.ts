@@ -24,8 +24,11 @@ interface RawResponse {
 function toRemote(raw: RawSkillsMp): RemoteSkill | null {
   const name = raw.name?.trim();
   if (!name) return null;
-  const repo = repoFromGitHubUrl(raw.githubUrl ?? "") ??
-    (raw.route?.ownerSlug && raw.route?.repoSlug ? `${raw.route.ownerSlug}/${raw.route.repoSlug}` : undefined);
+  const repo =
+    repoFromGitHubUrl(raw.githubUrl ?? "") ??
+    (raw.route?.ownerSlug && raw.route?.repoSlug
+      ? `${raw.route.ownerSlug}/${raw.route.repoSlug}`
+      : undefined);
   return {
     name,
     description: raw.description ?? "",
@@ -48,7 +51,10 @@ async function syncCatalog(fetcher: Fetcher): Promise<RemoteSkill[]> {
   };
   const first = await get(1);
   const totalPages = Math.min(first.pagination?.totalPages ?? 1, MAX_PAGES);
-  const rest = totalPages > 1 ? await Promise.all(Array.from({ length: totalPages - 1 }, (_, i) => get(i + 2))) : [];
+  const rest =
+    totalPages > 1
+      ? await Promise.all(Array.from({ length: totalPages - 1 }, (_, i) => get(i + 2)))
+      : [];
   const out = [first, ...rest]
     .flatMap((r) => r.skills ?? [])
     .map(toRemote)
@@ -58,8 +64,17 @@ async function syncCatalog(fetcher: Fetcher): Promise<RemoteSkill[]> {
 }
 
 function matches(skill: RemoteSkill, q: string): boolean {
-  const hay = (skill.name + " " + skill.description + " " + (skill.tags ?? []).join(" ")).toLowerCase();
-  return q.toLowerCase().split(/\s+/).every((t) => hay.includes(t));
+  const hay = (
+    skill.name +
+    " " +
+    skill.description +
+    " " +
+    (skill.tags ?? []).join(" ")
+  ).toLowerCase();
+  return q
+    .toLowerCase()
+    .split(/\s+/)
+    .every((t) => hay.includes(t));
 }
 
 export const skillsMpProvider: Provider = {

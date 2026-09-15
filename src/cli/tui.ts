@@ -27,7 +27,10 @@ export function canUseTui(): boolean {
 }
 
 async function withRenderer<T>(
-  build: (renderer: Awaited<ReturnType<typeof createCliRenderer>>, resolve: (value: T) => void) => void | Promise<void>,
+  build: (
+    renderer: Awaited<ReturnType<typeof createCliRenderer>>,
+    resolve: (value: T) => void,
+  ) => void | Promise<void>,
 ): Promise<T> {
   let resolveOuter!: (value: T) => void;
   const result = new Promise<T>((resolve) => {
@@ -96,13 +99,11 @@ export async function askSelect<T>(opts: {
     const select = new SelectRenderable(renderer, {
       width: "auto",
       height: opts.height ?? Math.min(10, Math.max(4, opts.options.length + 1)),
-      options: opts.options.map(
-        (o): SelectOption => ({
-          name: o.name,
-          description: o.description ?? "",
-          value: o.value,
-        }),
-      ),
+      options: opts.options.map((o): SelectOption => ({
+        name: o.name,
+        description: o.description ?? "",
+        value: o.value,
+      })),
       backgroundColor: PANEL,
       focusedBackgroundColor: "#242822",
       textColor: TEXT,
@@ -121,7 +122,12 @@ export async function askSelect<T>(opts: {
     });
 
     panel.add(select);
-    panel.add(new TextRenderable(renderer, { content: "↑↓ navigate · enter select · esc cancel", fg: MUTED }));
+    panel.add(
+      new TextRenderable(renderer, {
+        content: "↑↓ navigate · enter select · esc cancel",
+        fg: MUTED,
+      }),
+    );
     renderer.root.add(panel);
     select.focus();
   });
@@ -146,7 +152,9 @@ export async function askConfirm(opts: {
     options: [
       {
         name: opts.confirmLabel ?? (opts.danger ? "Uninstall" : "Confirm"),
-        description: opts.danger ? "Proceed with this destructive action" : "Run the planned command",
+        description: opts.danger
+          ? "Proceed with this destructive action"
+          : "Run the planned command",
         value: true,
       },
       {

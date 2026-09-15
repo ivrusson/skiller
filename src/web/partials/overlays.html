@@ -4,7 +4,7 @@
 <div id="loaderr">
   <p>Couldn&rsquo;t load skills from the server.</p>
   <button id="retry">Retry</button>
-  <p style="margin-top:14px"><code id="loaderrDetail"></code></p>
+  <p style="margin-top: 14px"><code id="loaderrDetail"></code></p>
 </div>
 <div id="overlay">
   <div id="drawer"></div>
@@ -32,12 +32,18 @@
     <div class="tcmd" id="termCmd"></div>
     <div class="topt">
       <label title="Omit -y / --no-input and allocate a PTY so you can answer CLI prompts">
-        <input type="checkbox" id="termInteractive"> Interactive prompts
+        <input type="checkbox" id="termInteractive" /> Interactive prompts
       </label>
     </div>
     <div class="tlog" id="termLog" aria-live="polite"></div>
     <div class="tfoot">
-      <input id="termInput" type="text" placeholder="Type a reply and press Enter…" autocomplete="off" disabled>
+      <input
+        id="termInput"
+        type="text"
+        placeholder="Type a reply and press Enter…"
+        autocomplete="off"
+        disabled
+      />
       <div class="actions">
         <button type="button" id="termStart" class="primary">Run</button>
       </div>

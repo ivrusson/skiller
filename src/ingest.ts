@@ -69,17 +69,25 @@ function contentBlocks(msg: unknown): Array<Record<string, unknown>> {
   return Array.isArray(content) ? (content as Array<Record<string, unknown>>) : [];
 }
 
-function* toolInputs(file: string): Generator<{ name: string; input: Record<string, unknown>; ts: number }> {
+function* toolInputs(
+  file: string,
+): Generator<{ name: string; input: Record<string, unknown>; ts: number }> {
   const mtime = statSync(file).mtimeMs;
   for (const obj of eachLine(file)) {
     const message = obj.message as Record<string, unknown> | undefined;
     for (const block of contentBlocks(message)) {
       if (block.type !== "tool_use") continue;
-      const input = typeof block.input === "object" && block.input !== null ? (block.input as Record<string, unknown>) : {};
+      const input =
+        typeof block.input === "object" && block.input !== null
+          ? (block.input as Record<string, unknown>)
+          : {};
       yield {
         name: String(block.name ?? ""),
         input,
-        ts: typeof obj.timestamp === "string" || typeof obj.timestamp === "number" ? new Date(obj.timestamp as string).getTime() || mtime : mtime,
+        ts:
+          typeof obj.timestamp === "string" || typeof obj.timestamp === "number"
+            ? new Date(obj.timestamp as string).getTime() || mtime
+            : mtime,
       };
     }
   }
@@ -149,7 +157,12 @@ function ingestCursor(
       const sessionId = sessionIdOf(file);
       for (const { name, input, ts } of toolInputs(file)) {
         if (!CURSOR_READ_TOOLS.has(name)) continue;
-        const path = typeof input.path === "string" ? input.path : typeof input.file_path === "string" ? input.file_path : "";
+        const path =
+          typeof input.path === "string"
+            ? input.path
+            : typeof input.file_path === "string"
+              ? input.file_path
+              : "";
         const m = SKILL_PATH_RE.exec(path);
         if (!m) continue;
         const dirName = m[1]!;

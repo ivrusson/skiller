@@ -46,7 +46,10 @@ export function assessTrust(
 ): TrustAssessment {
   let score = 15;
   const reasons: string[] = [];
-  const providers = s.provider.split(/\s*\+\s*/).map((p) => p.trim()).filter(Boolean);
+  const providers = s.provider
+    .split(/\s*\+\s*/)
+    .map((p) => p.trim())
+    .filter(Boolean);
 
   const owner = repoOwner(s.repo);
   if (owner && KNOWN_ORGS.has(owner)) {

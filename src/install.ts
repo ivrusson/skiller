@@ -49,9 +49,7 @@ export function planInstall(opts: {
   if (resolved === "clawhub") {
     const slug = cleanRepo(opts.repo) ?? opts.repo.trim();
     if (!slug) return { ok: false, error: `invalid clawhub slug "${opts.repo}"` };
-    const argv = auto
-      ? ["clawhub", "install", slug, "--no-input"]
-      : ["clawhub", "install", slug];
+    const argv = auto ? ["clawhub", "install", slug, "--no-input"] : ["clawhub", "install", slug];
     return {
       ok: true,
       spec: {
@@ -125,9 +123,15 @@ export interface InstallResult {
   provider?: InstallProvider;
 }
 
-type Spawner = (argv: string[], timeoutMs: number) => Promise<{ exit: number; stdout: string; stderr: string }>;
+type Spawner = (
+  argv: string[],
+  timeoutMs: number,
+) => Promise<{ exit: number; stdout: string; stderr: string }>;
 
-async function defaultSpawn(argv: string[], timeoutMs: number): Promise<{ exit: number; stdout: string; stderr: string }> {
+async function defaultSpawn(
+  argv: string[],
+  timeoutMs: number,
+): Promise<{ exit: number; stdout: string; stderr: string }> {
   const proc = Bun.spawn(argv, { stdout: "pipe", stderr: "pipe" });
   const timer = setTimeout(() => proc.kill(), timeoutMs);
   try {
@@ -158,7 +162,13 @@ async function spawnWithClawhubFallback(
         provider: spec.provider,
       };
     } catch (err) {
-      return { ok: false, command: spec.display, stdout: "", stderr: String(err), provider: spec.provider };
+      return {
+        ok: false,
+        command: spec.display,
+        stdout: "",
+        stderr: String(err),
+        provider: spec.provider,
+      };
     }
   }
 
@@ -191,7 +201,13 @@ async function spawnWithClawhubFallback(
       if (r.exit === 127 || /not found|ENOENT/i.test(r.stderr)) continue;
       return last;
     } catch (err) {
-      last = { ok: false, command: attempt.display, stdout: "", stderr: String(err), provider: "clawhub" };
+      last = {
+        ok: false,
+        command: attempt.display,
+        stdout: "",
+        stderr: String(err),
+        provider: "clawhub",
+      };
       if (/ENOENT|not found/i.test(String(err))) continue;
       return last;
     }
@@ -206,9 +222,12 @@ export async function runCommandSpec(
   return spawnWithClawhubFallback(spec, opts.timeoutMs ?? 120_000, opts.spawn ?? defaultSpawn);
 }
 
-export async function installSkill(
-  opts: { repo: string; provider?: string; timeoutMs?: number; spawn?: Spawner },
-): Promise<InstallResult> {
+export async function installSkill(opts: {
+  repo: string;
+  provider?: string;
+  timeoutMs?: number;
+  spawn?: Spawner;
+}): Promise<InstallResult> {
   const planned = planInstall({ repo: opts.repo, provider: opts.provider });
   if (!planned.ok) {
     return { ok: false, command: "", stdout: "", stderr: planned.error };
@@ -216,9 +235,13 @@ export async function installSkill(
   return runCommandSpec(planned.spec, opts);
 }
 
-export async function uninstallSkill(
-  opts: { name: string; repo?: string; provider?: string; timeoutMs?: number; spawn?: Spawner },
-): Promise<InstallResult> {
+export async function uninstallSkill(opts: {
+  name: string;
+  repo?: string;
+  provider?: string;
+  timeoutMs?: number;
+  spawn?: Spawner;
+}): Promise<InstallResult> {
   const planned = planUninstall({ name: opts.name, repo: opts.repo, provider: opts.provider });
   if (!planned.ok) {
     return { ok: false, command: "", stdout: "", stderr: planned.error };

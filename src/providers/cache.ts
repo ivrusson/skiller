@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { ensureSkillerHome, providerCachePath, providersCacheDir } from "../paths";
 
@@ -66,7 +74,11 @@ export function providerCacheInfo(): Array<{ id: string; updatedAt: number; entr
       try {
         const parsed = JSON.parse(readFileSync(join(dir, f), "utf8")) as CacheFile<unknown>;
         const data = parsed.data;
-        const entries = Array.isArray(data) ? data.length : typeof data === "object" && data !== null ? Object.keys(data).length : 0;
+        const entries = Array.isArray(data)
+          ? data.length
+          : typeof data === "object" && data !== null
+            ? Object.keys(data).length
+            : 0;
         out.push({ id: f.replace(/\.json$/, ""), updatedAt: parsed.updatedAt, entries });
       } catch {}
     }

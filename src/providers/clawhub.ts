@@ -28,7 +28,10 @@ export function parseClawhubOutput(output: string): RemoteSkill[] {
     if (seen.has(key)) continue;
     seen.add(key);
     const name = slug.split("/")[1]!;
-    const description = line.replace(m[0], "").replace(/^[\s│|\-–—:]+/, "").trim();
+    const description = line
+      .replace(m[0], "")
+      .replace(/^[\s│|\-–—:]+/, "")
+      .trim();
     out.push({
       name,
       description,
@@ -42,7 +45,10 @@ export function parseClawhubOutput(output: string): RemoteSkill[] {
 
 function matches(skill: RemoteSkill, q: string): boolean {
   const hay = (skill.name + " " + skill.description + " " + skill.repo).toLowerCase();
-  return q.toLowerCase().split(/\s+/).every((t) => hay.includes(t));
+  return q
+    .toLowerCase()
+    .split(/\s+/)
+    .every((t) => hay.includes(t));
 }
 
 export const clawhubProvider: Provider = {
@@ -58,6 +64,8 @@ export const clawhubProvider: Provider = {
       output = await trySearch(["npx", "-y", "clawhub@latest", "search", term]);
     }
     if (output === null) return [];
-    return parseClawhubOutput(output).filter((s) => matches(s, term) || s.repo?.toLowerCase().includes(term.toLowerCase()));
+    return parseClawhubOutput(output).filter(
+      (s) => matches(s, term) || s.repo?.toLowerCase().includes(term.toLowerCase()),
+    );
   },
 };

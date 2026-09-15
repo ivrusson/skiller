@@ -22,12 +22,22 @@ afterEach(() => {
 describe("autoTags", () => {
   test("clasifica por contenido", () => {
     expect(
-      autoTags({ name: "tdd", description: "Test-driven development. Use when writing tests first", summary: "" }),
+      autoTags({
+        name: "tdd",
+        description: "Test-driven development. Use when writing tests first",
+        summary: "",
+      }),
     ).toContain("testing");
     expect(
-      autoTags({ name: "hono", description: "Develop Hono applications. API reference lookup", summary: "" }),
+      autoTags({
+        name: "hono",
+        description: "Develop Hono applications. API reference lookup",
+        summary: "",
+      }),
     ).toContain("backend");
-    expect(autoTags({ name: "zz-sin-clase", description: "cosas varias sin clasificar", summary: "" })).toEqual([]);
+    expect(
+      autoTags({ name: "zz-sin-clase", description: "cosas varias sin clasificar", summary: "" }),
+    ).toEqual([]);
   });
 
   test("un skill puede tener varios tags y respeta el máximo", () => {
@@ -41,19 +51,43 @@ describe("autoTags", () => {
   });
 
   test("no confunde 'review' con 'preview'", () => {
-    expect(autoTags({ name: "preview", description: "Preview things before publishing", summary: "" })).not.toContain("review");
-    expect(autoTags({ name: "code-review", description: "Review the changes since a commit", summary: "" })).toContain("review");
+    expect(
+      autoTags({ name: "preview", description: "Preview things before publishing", summary: "" }),
+    ).not.toContain("review");
+    expect(
+      autoTags({
+        name: "code-review",
+        description: "Review the changes since a commit",
+        summary: "",
+      }),
+    ).toContain("review");
   });
 
   test("no etiqueta frontend por mencionar 'ui' suelto", () => {
     expect(
-      autoTags({ name: "dokploy-api-mcp", description: "Deploy and manage applications on Dokploy (self-hosted PaaS)", summary: "" }),
+      autoTags({
+        name: "dokploy-api-mcp",
+        description: "Deploy and manage applications on Dokploy (self-hosted PaaS)",
+        summary: "",
+      }),
     ).not.toContain("frontend");
   });
 
   test("'skill' en el cuerpo no basta para agentes-ia; en el nombre sí", () => {
-    expect(autoTags({ name: "tdd", description: "Use this skill when writing tests first", summary: "" })).not.toContain("ai-agents");
-    expect(autoTags({ name: "skill-creator", description: "Create new skills and run evals", summary: "" })).toContain("ai-agents");
+    expect(
+      autoTags({
+        name: "tdd",
+        description: "Use this skill when writing tests first",
+        summary: "",
+      }),
+    ).not.toContain("ai-agents");
+    expect(
+      autoTags({
+        name: "skill-creator",
+        description: "Create new skills and run evals",
+        summary: "",
+      }),
+    ).toContain("ai-agents");
   });
 });
 

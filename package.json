@@ -1,26 +1,34 @@
 {
   "name": "skiller",
   "version": "0.1.0",
-  "module": "index.ts",
-  "type": "module",
   "private": true,
   "bin": {
     "skiller": "./index.ts"
   },
+  "type": "module",
+  "module": "index.ts",
   "scripts": {
     "dev": "bun run --watch index.ts ui",
     "start": "bun run index.ts",
     "ui": "bun run index.ts ui",
     "serve": "bun run index.ts ui",
-    "test": "bun test"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "test": "bun test",
+    "build": "mkdir -p dist && bun build ./index.ts --compile --outfile dist/skiller",
+    "lint": "oxlint .",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check .",
+    "release:context": "bun run scripts/release-context.ts",
+    "install:local": "bash ./install.sh"
   },
   "dependencies": {
     "@opentui/core": "^0.5.11"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "oxfmt": "^0.68.0",
+    "oxlint": "^1.83.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }

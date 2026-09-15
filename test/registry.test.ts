@@ -7,9 +7,27 @@ import { resetPathsState } from "../src/paths";
 
 describe("pickBest", () => {
   const results = [
-    { id: "alice/misc/retro-copy", skillId: "retro-copy", name: "retro", installs: 5, source: "alice/misc" },
-    { id: "yusukebe/hono-skill/hono", skillId: "hono", name: "hono", installs: 12732, source: "yusukebe/hono-skill" },
-    { id: "bob/something/hono-api", skillId: "hono-api", name: "hono-api", installs: 99, source: "bob/something" },
+    {
+      id: "alice/misc/retro-copy",
+      skillId: "retro-copy",
+      name: "retro",
+      installs: 5,
+      source: "alice/misc",
+    },
+    {
+      id: "yusukebe/hono-skill/hono",
+      skillId: "hono",
+      name: "hono",
+      installs: 12732,
+      source: "yusukebe/hono-skill",
+    },
+    {
+      id: "bob/something/hono-api",
+      skillId: "hono-api",
+      name: "hono-api",
+      installs: 99,
+      source: "bob/something",
+    },
   ];
 
   test("coincidencia exacta por skillId", () => {

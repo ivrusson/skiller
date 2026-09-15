@@ -32,7 +32,10 @@ export function ownerOf(repo: string | null | undefined): string | null {
   return owner || null;
 }
 
-export function originFromSource(name: string, source?: string | null): SkillOrigin & { repo: string | null; owner: string | null } {
+export function originFromSource(
+  name: string,
+  source?: string | null,
+): SkillOrigin & { repo: string | null; owner: string | null } {
   const repo = normalizeRepo(source);
   return { name, source: source ?? null, repo, owner: ownerOf(repo) };
 }
@@ -103,9 +106,7 @@ export function groupUsageByRelation(
   const relByLower = new Map<string, SkillRelations>();
   for (const [name, rel] of relations) relByLower.set(name.toLowerCase(), rel);
 
-  const names = allNames ?? [
-    ...new Set([...usage.map((u) => u.skillName), ...relations.keys()]),
-  ];
+  const names = allNames ?? [...new Set([...usage.map((u) => u.skillName), ...relations.keys()])];
 
   const buckets = new Map<string, string[]>();
   for (const name of names) {

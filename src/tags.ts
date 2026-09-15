@@ -44,7 +44,9 @@ export function addTags(name: string, tags: string[]): string[] {
 
 export function removeTags(name: string, tags: string[]): string[] {
   const map = loadTags();
-  const rest = (map[name] ?? []).filter((t) => !tags.some((x) => x.toLowerCase() === t.toLowerCase()));
+  const rest = (map[name] ?? []).filter(
+    (t) => !tags.some((x) => x.toLowerCase() === t.toLowerCase()),
+  );
   if (rest.length) map[name] = rest;
   else delete map[name];
   saveTags(map);
@@ -64,16 +66,33 @@ interface Rule {
 const RULES: Rule[] = [
   { tag: "testing", pattern: /\b(tdd|tests?|testing|spec|coverage|shoehorn|red-green)\b/ },
   { tag: "typescript", pattern: /typescript|type.?safe|type system|typecheck/ },
-  { tag: "frontend", pattern: /react|next\.?js|tailwind|\bcss\b|frontend|front-end|components?|heroui/ },
+  {
+    tag: "frontend",
+    pattern: /react|next\.?js|tailwind|\bcss\b|frontend|front-end|components?|heroui/,
+  },
   { tag: "backend", pattern: /\b(hono|api|backend|cloudflare|http)\b/ },
   { tag: "data", pattern: /drizzle|\bsql\b|postgres|database|migrat|\borm\b/ },
-  { tag: "devops", pattern: /deploy|docker|dokploy|ci\/cd|pre-commit|\bhooks?\b|hosting|infrastructure/ },
+  {
+    tag: "devops",
+    pattern: /deploy|docker|dokploy|ci\/cd|pre-commit|\bhooks?\b|hosting|infrastructure/,
+  },
   { tag: "git", pattern: /\bgit\b|merge conflict|\bcommit|branch/ },
-  { tag: "architecture", pattern: /architect|system design|domain model|\badr\b|deep modules?|coupling|cohesion|\bsolid\b/ },
-  { tag: "ai-agents", pattern: /agent|claude|opencode|orca|\bmcp\b|orchestrat|codex|worktrees?|computer.?use/ },
+  {
+    tag: "architecture",
+    pattern:
+      /architect|system design|domain model|\badr\b|deep modules?|coupling|cohesion|\bsolid\b/,
+  },
+  {
+    tag: "ai-agents",
+    pattern: /agent|claude|opencode|orca|\bmcp\b|orchestrat|codex|worktrees?|computer.?use/,
+  },
   { tag: "ai-agents", pattern: /skills?/, nameOnly: true },
   { tag: "writing", pattern: /writing|docs?\b|readme|document|handoff|markdown|technical writing/ },
-  { tag: "workflow", pattern: /workflow|handoff|triage|tickets?|spec\b|retro|wizard|plan(ning)?|questionnaire|decision/ },
+  {
+    tag: "workflow",
+    pattern:
+      /workflow|handoff|triage|tickets?|spec\b|retro|wizard|plan(ning)?|questionnaire|decision/,
+  },
   { tag: "debugging", pattern: /\bbugs?\b|diagnos|debug|regression|errors?|crash/ },
   { tag: "research", pattern: /research|investigat|primary sources/ },
   { tag: "security", pattern: /security|guardrails?|dangerous|malicious|vulnerab/ },

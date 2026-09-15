@@ -6,6 +6,9 @@ out
 dist
 *.tgz
 
+# local release drafts (prepare-release skill)
+.releases/
+
 # code coverage
 coverage
 *.lcov
@@ -33,8 +36,10 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 
-# editor / local tooling
-.cursor
+# editor / local tooling (keep shared project skills)
+.cursor/*
+!.cursor/skills/
+!.cursor/skills/**
 .vscode
 *.mov
 *.mp4

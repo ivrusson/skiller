@@ -1,7 +1,13 @@
 import { readFileSync } from "node:fs";
 import { collect } from "./collect";
 import { ingestAll } from "./ingest";
-import { installSkill, planInstall, planUninstall, uninstallSkill, type CommandSpec } from "./install";
+import {
+  installSkill,
+  planInstall,
+  planUninstall,
+  uninstallSkill,
+  type CommandSpec,
+} from "./install";
 import { explore } from "./providers";
 import { clearProviderCaches } from "./providers/cache";
 import { startLiveRun, type LiveRun, type RunSessionMessage } from "./run-session";
@@ -35,10 +41,13 @@ function send(ws: { send: (s: string) => void }, msg: RunSessionMessage): void {
   }
 }
 
-function planFromStart(msg: Record<string, unknown>): { ok: true; spec: CommandSpec } | { ok: false; error: string } {
+function planFromStart(
+  msg: Record<string, unknown>,
+): { ok: true; spec: CommandSpec } | { ok: false; error: string } {
   const interactive = msg.interactive === true;
   if (msg.action === "install") {
-    if (typeof msg.repo !== "string" || !msg.repo.trim()) return { ok: false, error: "missing repo" };
+    if (typeof msg.repo !== "string" || !msg.repo.trim())
+      return { ok: false, error: "missing repo" };
     return planInstall({
       repo: msg.repo.trim(),
       provider: typeof msg.provider === "string" ? msg.provider : undefined,
@@ -46,7 +55,8 @@ function planFromStart(msg: Record<string, unknown>): { ok: true; spec: CommandS
     });
   }
   if (msg.action === "uninstall") {
-    if (typeof msg.name !== "string" || !msg.name.trim()) return { ok: false, error: "missing name" };
+    if (typeof msg.name !== "string" || !msg.name.trim())
+      return { ok: false, error: "missing name" };
     return planUninstall({
       name: msg.name.trim(),
       repo: typeof msg.repo === "string" ? msg.repo : undefined,
@@ -111,7 +121,10 @@ export function startServer(opts: { port: number; host: string; refreshOnStart?:
           } catch {
             return json({ error: "invalid body" }, 400);
           }
-          const b = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
+          const b = (typeof body === "object" && body !== null ? body : {}) as Record<
+            string,
+            unknown
+          >;
           if (typeof b.name !== "string" || typeof b.tag !== "string" || !b.tag.trim()) {
             return json({ error: "expected { name, tag }" }, 400);
           }
@@ -133,8 +146,15 @@ export function startServer(opts: { port: number; host: string; refreshOnStart?:
         GET: async () => json(getUsageStats()),
         POST: async (req) => {
           let body: unknown;
-          try { body = await req.json(); } catch { return json({ error: "invalid body" }, 400); }
-          const b = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
+          try {
+            body = await req.json();
+          } catch {
+            return json({ error: "invalid body" }, 400);
+          }
+          const b = (typeof body === "object" && body !== null ? body : {}) as Record<
+            string,
+            unknown
+          >;
           if (typeof b.skillName !== "string" || typeof b.harness !== "string") {
             return json({ error: "expected { skillName, harness }" }, 400);
           }
@@ -173,8 +193,15 @@ export function startServer(opts: { port: number; host: string; refreshOnStart?:
       "/api/install": {
         POST: async (req) => {
           let body: unknown;
-          try { body = await req.json(); } catch { return json({ error: "invalid body" }, 400); }
-          const b = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
+          try {
+            body = await req.json();
+          } catch {
+            return json({ error: "invalid body" }, 400);
+          }
+          const b = (typeof body === "object" && body !== null ? body : {}) as Record<
+            string,
+            unknown
+          >;
           if (typeof b.repo !== "string" || !b.repo.trim()) {
             return json({ error: "expected { repo, confirm: true }" }, 400);
           }
@@ -183,7 +210,11 @@ export function startServer(opts: { port: number; host: string; refreshOnStart?:
           if (b.preview === true) {
             const planned = planInstall({ repo: b.repo.trim(), provider, interactive });
             if (!planned.ok) return json({ error: planned.error }, 400);
-            return json({ ok: true, command: planned.spec.display, provider: planned.spec.provider });
+            return json({
+              ok: true,
+              command: planned.spec.display,
+              provider: planned.spec.provider,
+            });
           }
           if (b.confirm !== true) {
             return json({ error: "confirmation required", hint: "pass { confirm: true }" }, 400);
@@ -199,8 +230,15 @@ export function startServer(opts: { port: number; host: string; refreshOnStart?:
       "/api/uninstall": {
         POST: async (req) => {
           let body: unknown;
-          try { body = await req.json(); } catch { return json({ error: "invalid body" }, 400); }
-          const b = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
+          try {
+            body = await req.json();
+          } catch {
+            return json({ error: "invalid body" }, 400);
+          }
+          const b = (typeof body === "object" && body !== null ? body : {}) as Record<
+            string,
+            unknown
+          >;
           if (typeof b.name !== "string" || !b.name.trim()) {
             return json({ error: "expected { name, confirm: true }" }, 400);
           }
@@ -210,7 +248,11 @@ export function startServer(opts: { port: number; host: string; refreshOnStart?:
           if (b.preview === true) {
             const planned = planUninstall({ name: b.name.trim(), repo, provider, interactive });
             if (!planned.ok) return json({ error: planned.error }, 400);
-            return json({ ok: true, command: planned.spec.display, provider: planned.spec.provider });
+            return json({
+              ok: true,
+              command: planned.spec.display,
+              provider: planned.spec.provider,
+            });
           }
           if (b.confirm !== true) {
             return json({ error: "confirmation required", hint: "pass { confirm: true }" }, 400);
@@ -241,7 +283,10 @@ export function startServer(opts: { port: number; host: string; refreshOnStart?:
         const data = ws.data as WsData;
         let msg: Record<string, unknown>;
         try {
-          msg = JSON.parse(typeof raw === "string" ? raw : new TextDecoder().decode(raw)) as Record<string, unknown>;
+          msg = JSON.parse(typeof raw === "string" ? raw : new TextDecoder().decode(raw)) as Record<
+            string,
+            unknown
+          >;
         } catch {
           send(ws, { type: "error", message: "invalid json" });
           return;
