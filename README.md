@@ -6,7 +6,8 @@ Skiller is a Bun CLI plus a local web UI. It finds every `SKILL.md` your harness
 
 ```bash
 bun install
-bun link                    # optional: put `skiller` on your PATH
+./install.sh                   # compile + install to ~/.local/bin/skiller
+# or: bun link                 # run via Bun without a standalone binary
 skiller list
 skiller ui --open
 ```
@@ -17,11 +18,11 @@ Requirements: [Bun](https://bun.sh) ≥ 1.1. Network is optional for local listi
 
 ## What you get
 
-| Surface | Use it to |
-| --- | --- |
-| **CLI** | List/info, tags, explore, install/uninstall, usage analytics, OpenTUI wizards |
-| **Web UI** | Browse installed skills, search catalogs, install/uninstall with a live terminal |
-| **Usage DB** | See which skills Claude Code / Cursor (and friends) actually invoke |
+| Surface      | Use it to                                                                        |
+| ------------ | -------------------------------------------------------------------------------- |
+| **CLI**      | List/info, tags, explore, install/uninstall, usage analytics, OpenTUI wizards    |
+| **Web UI**   | Browse installed skills, search catalogs, install/uninstall with a live terminal |
+| **Usage DB** | See which skills Claude Code / Cursor (and friends) actually invoke              |
 
 Everything runs locally under `~/.skiller`. Skiller never deletes skill folders itself — install and uninstall always go through `npx skills` or `clawhub`.
 
@@ -32,20 +33,20 @@ Everything runs locally under `~/.skiller`. Skiller never deletes skill folders 
 ```bash
 git clone https://github.com/ivrusson/skiller.git
 cd skiller
-bun install
+./install.sh                # bun install + compile → ~/.local/bin/skiller
 
 # Inventory
-bun run index.ts list
-bun run index.ts info hono
+skiller list
+skiller info hono
 
 # Web UI → http://127.0.0.1:4780
-bun run index.ts ui --open
+skiller ui --open
 
 # Interactive menu (TTY)
-bun run index.ts wizard
+skiller wizard
 ```
 
-After `bun link`, you can call `skiller` instead of `bun run index.ts`.
+Without installing a binary you can also `bun install && bun link`, or run `bun run index.ts …` directly.
 
 ---
 
@@ -185,8 +186,21 @@ skiller usage by-repo | by-owner | purge | db
 ```bash
 bun install
 bun test
+bun run lint
+bun run fmt:check
+bun run build              # → dist/skiller
+./install.sh               # build + install to ~/.local/bin (PREFIX=… to override)
+./install.sh --build-only  # compile only
 bun run --watch index.ts ui    # or: bun run dev
 ```
+
+### Releasing
+
+1. Ask an agent to **prepare a release** (uses `.cursor/skills/prepare-release`).
+2. Review the draft under `.releases/` (gitignored) — version, changelog, tag commands.
+3. Bump `"version"` in `package.json` if you agree, commit if desired.
+4. Push an annotated tag: `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`.
+5. GitHub Actions builds standalone binaries on native runners (OpenTUI ships per-OS natives; cross-compile from one OS is not reliable) and attaches them to the GitHub Release.
 
 Layout:
 
