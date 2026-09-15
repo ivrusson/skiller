@@ -76,8 +76,8 @@ ensure_path_note() {
     *":$BIN_DIR:"*) ;;
     *)
       echo
-      echo "note: $BIN_DIR is not on your PATH."
-      echo "add this to your shell profile:"
+      echo "note: $BIN_DIR is not on your PATH, so \`skiller\` will not resolve yet."
+      echo "add this to your shell profile, then open a new terminal:"
       echo "  export PATH=\"$BIN_DIR:\$PATH\""
       ;;
   esac
@@ -85,10 +85,19 @@ ensure_path_note() {
 
 install_binary() {
   local src="$1"
+  local dest="$BIN_DIR/skiller"
   mkdir -p "$BIN_DIR"
-  install -m 755 "$src" "$BIN_DIR/skiller"
-  echo "==> installed $BIN_DIR/skiller"
-  ensure_path_note
+  # Replace any previous file/symlink (e.g. from \`bun link\`) with the real binary.
+  rm -f "$dest"
+  install -m 755 "$src" "$dest"
+  echo "==> installed command: skiller → $dest"
+
+  if command -v skiller >/dev/null 2>&1; then
+    echo "==> ok: \`skiller\` is on your PATH ($(command -v skiller))"
+  else
+    ensure_path_note
+  fi
+
   echo
   echo "try: skiller --help"
 }

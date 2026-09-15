@@ -28,7 +28,14 @@ Everything runs locally under `~/.skiller`. Skiller never deletes skill folders 
 
 ## Install
 
-All paths put a `skiller` binary on your `PATH` (default: `~/.local/bin`). Override with `PREFIX=/usr/local`.
+All paths put a `skiller` **command** on your `PATH` by installing the binary at `$PREFIX/bin/skiller` (default: `~/.local/bin/skiller`). After a successful install you run:
+
+```bash
+skiller --help
+skiller list
+```
+
+Override the install location with `PREFIX=/usr/local` (→ `/usr/local/bin/skiller`). If the installer warns that the bin dir is not on your `PATH`, add it to your shell profile and open a new terminal.
 
 ### 1. One-liner from source (recommended)
 
