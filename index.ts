@@ -12,8 +12,7 @@ import {
 } from "./src/usage";
 
 const args = process.argv.slice(2);
-if (args[0] === "--help" || args[0] === "-h" || args[0] === "help") {
-  console.log(`skiller — inspect the agent skills installed on this machine
+const HELP = `skiller — inspect the agent skills installed on this machine
 
 Usage:
   skiller list [--json] [--no-registry] [--refresh] [--tag t1,t2]   list all skills (default)
@@ -26,8 +25,10 @@ Usage:
   skiller cache [--clear-providers]                                 registry + provider catalog cache status
   skiller home                                                      print data directory (~/.skiller)
   skiller explore [query]                                           search skills (prompts if query omitted)
-  skiller install [owner/repo|slug] [--provider skills|clawhub] [--yes]
-  skiller uninstall [name] [--provider skills|clawhub] [--repo slug] [--yes]
+  skiller install [owner/repo|slug] [-a agent] [-s skill] [--all] [--copy] [--provider skills|clawhub] [--yes]
+  skiller uninstall [name] [-a agent] [-s skill] [--all] [--provider skills|clawhub] [--repo slug] [--yes]
+  skiller update [name...] [--yes]                                  update via npx skills update -g
+  skiller repair [name...] [-a agent] [--yes]                       re-link missing agents via skills add -a
   skiller usage                                                      show session stats per skill
   skiller usage by-repo                                              usage grouped by owner/repo
   skiller usage by-owner                                             usage grouped by contributor
@@ -37,21 +38,51 @@ Usage:
   skiller usage purge [--days N]                                   purge records older than N days
   skiller usage db                                                 print usage database path
   skiller usage ingest                                             scan harness transcripts and record skill usage
-  `);
+
+Install flags project 1:1 onto \`npx skills\` (skills provider). Prefer symlink (default);
+\`--copy\` is an escape hatch. ClawHub ignores -a/-s/--all/--copy.
+`;
+
+if (args[0] === "--help" || args[0] === "-h" || args[0] === "help") {
+  console.log(HELP);
   process.exit(0);
 }
-const cmd = args[0] && !args[0].startsWith("--") ? args[0] : "list";
+const cmd = args[0] && !args[0].startsWith("-") ? args[0] : "list";
 const rest = cmd === args[0] ? args.slice(1) : args;
 
-function flags(argv: string[]): Record<string, string | boolean> {
-  const out: Record<string, string | boolean> = {};
+const SHORT_FLAGS: Record<string, string> = {
+  a: "agent",
+  s: "skill",
+  y: "yes",
+  h: "help",
+  p: "provider",
+};
+
+type FlagValue = string | boolean | string[];
+
+function flags(argv: string[]): Record<string, FlagValue> {
+  const out: Record<string, FlagValue> = {};
+  const setMulti = (key: string, value: string) => {
+    const parts = value
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const prev = out[key];
+    const list = Array.isArray(prev) ? prev : typeof prev === "string" ? [prev] : [];
+    out[key] = [...list, ...parts];
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === undefined || !arg.startsWith("--")) continue;
-    const key = arg.slice(2);
+    if (arg === undefined || !arg.startsWith("-")) continue;
+    let key: string;
+    if (arg.startsWith("--")) key = arg.slice(2);
+    else if (arg.length === 2) key = SHORT_FLAGS[arg.slice(1)] ?? arg.slice(1);
+    else continue;
     const next = argv[i + 1];
-    if (next !== undefined && !next.startsWith("--")) {
-      out[key] = next;
+    const multi = key === "agent" || key === "skill";
+    if (next !== undefined && !next.startsWith("-")) {
+      if (multi) setMulti(key, next);
+      else out[key] = next;
       i++;
     } else {
       out[key] = true;
@@ -60,8 +91,18 @@ function flags(argv: string[]): Record<string, string | boolean> {
   return out;
 }
 
+function flagList(key: string): string[] | undefined {
+  const v = f[key];
+  if (v === undefined || typeof v === "boolean") return undefined;
+  if (Array.isArray(v)) return v;
+  return String(v)
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
 const f = flags(rest);
-const positional = rest.filter((a) => !a.startsWith("--"));
+const positional = rest.filter((a) => !a.startsWith("-"));
 
 async function collectFlagged(): Promise<WithMeta[]> {
   const rows = await collect({ refresh: !!f.refresh, registry: !f["no-registry"] });
@@ -87,29 +128,48 @@ function truncate(s: string, n: number): string {
   return s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s;
 }
 
+function fmtAgents(agents: string[] | undefined): string {
+  if (!agents?.length) return "—";
+  if (agents.length <= 2) return agents.join(",");
+  return `${agents.length} agents`;
+}
+
 function renderTable(rows: WithMeta[]): void {
-  const termWidth = process.stdout.columns ?? 110;
-  const wName = Math.min(32, Math.max(...rows.map((r) => r.name.length), 4));
-  const wScope = 18;
+  const termWidth = process.stdout.columns ?? 120;
+  const wName = Math.min(28, Math.max(...rows.map((r) => r.name.length), 4));
+  const wScope = 16;
+  const wAgents = 14;
   const wInst = 8;
-  const wDesc = Math.max(30, termWidth - wName - wScope - wInst - 7);
-  const line = (a: string, b: string, c: string, d: string) =>
-    `${a.padEnd(wName)} ${b.padEnd(wScope)} ${c.padStart(wInst)} ${d}`;
-  console.log(line("NAME", "SOURCE", "INSTALLS", "DESCRIPTION"));
-  console.log(line("─".repeat(wName), "─".repeat(wScope), "─".repeat(wInst), "─".repeat(wDesc)));
+  const wDesc = Math.max(24, termWidth - wName - wScope - wAgents - wInst - 8);
+  const line = (a: string, b: string, c: string, d: string, e: string) =>
+    `${a.padEnd(wName)} ${b.padEnd(wScope)} ${c.padEnd(wAgents)} ${d.padStart(wInst)} ${e}`;
+  console.log(line("NAME", "SOURCE", "AGENTS", "INSTALLS", "DESCRIPTION"));
+  console.log(
+    line(
+      "─".repeat(wName),
+      "─".repeat(wScope),
+      "─".repeat(wAgents),
+      "─".repeat(wInst),
+      "─".repeat(wDesc),
+    ),
+  );
   for (const r of rows) {
     const desc = truncate(r.description || r.summary, wDesc);
     console.log(
       line(
         truncate(r.name, wName),
         truncate(r.source, wScope),
+        truncate(fmtAgents(r.agents), wAgents),
         fmtInstalls(r.registry?.installs),
         desc,
       ),
     );
   }
   const withReg = rows.filter((r) => r.registry).length;
-  console.log(`\n${rows.length} skills · ${withReg} found on skills.sh`);
+  const withAgents = rows.filter((r) => r.agents?.length).length;
+  console.log(
+    `\n${rows.length} skills · ${withReg} found on skills.sh · ${withAgents} with agent coverage`,
+  );
 }
 
 function renderInfo(skill: WithMeta, siblings: WithMeta[]): void {
@@ -121,6 +181,12 @@ function renderInfo(skill: WithMeta, siblings: WithMeta[]): void {
     console.log(`installed in: ${siblings.map((s) => `${s.source}`).join(", ")}`);
   } else {
     console.log(`location    : ${skill.source}`);
+  }
+  if (skill.agents?.length) {
+    console.log(`agents      : ${skill.agents.join(", ")}`);
+  }
+  if (skill.skillsSource) {
+    console.log(`skills src  : ${skill.skillsSource}`);
   }
   console.log(`path        : ${skill.path}`);
   console.log(
@@ -164,31 +230,21 @@ function renderInfo(skill: WithMeta, siblings: WithMeta[]): void {
 }
 
 function usage(): void {
-  console.log(`skiller — inspect the agent skills installed on this machine
+  console.log(HELP);
+}
 
-Usage:
-  skiller list [--json] [--no-registry] [--refresh] [--tag t1,t2]   list all skills (default)
-  skiller wizard                                                    interactive menu (TTY + OpenTUI)
-  skiller info <name> [--json]                                      show one skill in detail
-  skiller ui [--port 4780] [--open] [--refresh]                     local web view
-  skiller tag <name> <tag...>                                       add manual tags to a skill
-  skiller untag <name> <tag...>                                     remove manual tags
-  skiller tags                                                      list manual tags with counts
-  skiller cache [--clear-providers]                                 registry + provider catalog cache status
-  skiller home                                                      print data directory (~/.skiller)
-  skiller explore [query]                                           search skills (prompts if query omitted)
-  skiller install [owner/repo|slug] [--provider skills|clawhub] [--yes]
-  skiller uninstall [name] [--provider skills|clawhub] [--repo slug] [--yes]
-  skiller usage                                                      show session stats per skill
-  skiller usage by-repo                                              usage grouped by owner/repo
-  skiller usage by-owner                                             usage grouped by contributor
-  skiller usage log <skill> <harness> [--session <id>]   record a session
-  skiller usage harness                                            sessions per harness
-  skiller usage unused [--days N]                                  skills unused in N days
-  skiller usage purge [--days N]                                   purge records older than N days
-  skiller usage db                                                 print usage database path
-  skiller usage ingest                                             scan harness transcripts and record skill usage
-  `);
+function mutateOptsFromFlags(): {
+  agents?: string[];
+  skills?: string[];
+  all?: boolean;
+  copy?: boolean;
+} {
+  return {
+    agents: flagList("agent"),
+    skills: flagList("skill"),
+    all: !!f.all,
+    copy: !!f.copy,
+  };
 }
 
 async function runExplore(q: string): Promise<void> {
@@ -216,7 +272,14 @@ async function runExplore(q: string): Promise<void> {
   console.log(`\n${results.length} result(s) — install with: skiller install <owner/repo>`);
 }
 
-async function runInstall(opts: { repo: string; provider?: string }): Promise<void> {
+async function runInstall(opts: {
+  repo: string;
+  provider?: string;
+  agents?: string[];
+  skills?: string[];
+  all?: boolean;
+  copy?: boolean;
+}): Promise<void> {
   const { installSkill } = await import("./src/install");
   const result = await installSkill(opts);
   if (result.stdout) console.log(result.stdout);
@@ -232,6 +295,9 @@ async function runUninstall(opts: {
   name: string;
   provider?: string;
   repo?: string;
+  agents?: string[];
+  skills?: string[];
+  all?: boolean;
 }): Promise<void> {
   const { uninstallSkill } = await import("./src/install");
   const result = await uninstallSkill(opts);
@@ -242,6 +308,110 @@ async function runUninstall(opts: {
     process.exit(1);
   }
   console.log(`uninstalled via ${result.command}`);
+}
+
+async function runUpdate(names: string[]): Promise<void> {
+  const { planUpdate, updateSkills } = await import("./src/install");
+  const { confirmCommand } = await import("./src/cli/wizards");
+  const planned = planUpdate({ names });
+  if (!planned.ok) {
+    console.error(planned.error);
+    process.exit(1);
+  }
+  const ok = await confirmCommand({
+    title: "Confirm update",
+    command: planned.spec.display,
+    yes: !!f.yes,
+  });
+  if (!ok) {
+    console.log("cancelled");
+    process.exit(1);
+  }
+  const result = await updateSkills({ names });
+  if (result.stdout) console.log(result.stdout);
+  if (result.stderr) console.error(result.stderr);
+  if (!result.ok) {
+    console.error(`update failed (${result.command})`);
+    process.exit(1);
+  }
+  console.log(`updated via ${result.command}`);
+}
+
+async function runRepair(names: string[]): Promise<void> {
+  const { planRepair, repairSkill, isInstallableRepo } = await import("./src/install");
+  const { fetchSkillsListGlobal, computeRepairGaps, agentDisplayToSlug } =
+    await import("./src/skills-cli");
+  const { confirmCommand } = await import("./src/cli/wizards");
+
+  const listed = await fetchSkillsListGlobal({ refresh: !!f.refresh });
+  if (!listed.ok) {
+    console.error(`skills list failed: ${listed.error}`);
+    process.exit(1);
+  }
+
+  const agentFlag = flagList("agent");
+  let gaps;
+
+  if (agentFlag?.length && !agentFlag.includes("*")) {
+    const want = new Set(agentFlag.map((a) => agentDisplayToSlug(a)));
+    gaps = [];
+    for (const e of listed.entries) {
+      if (names.length && !names.some((n) => n.toLowerCase() === e.name.toLowerCase())) continue;
+      const src = e.source.split(" ")[0]?.trim() ?? "";
+      if (!isInstallableRepo(src)) continue;
+      const have = new Set(e.agents.map((a) => agentDisplayToSlug(a)));
+      const missingSlugs = [...want].filter((s) => !have.has(s));
+      if (!missingSlugs.length) continue;
+      gaps.push({
+        name: e.name,
+        source: src,
+        missingDisplay: missingSlugs,
+        missingSlugs,
+      });
+    }
+  } else {
+    gaps = computeRepairGaps(listed.entries, {
+      names: names.length ? names : undefined,
+    });
+  }
+
+  if (!gaps.length) {
+    console.log("nothing to repair — agent coverage looks complete for the selection");
+    return;
+  }
+
+  for (const gap of gaps) {
+    const planned = planRepair({
+      source: gap.source,
+      skill: gap.name,
+      agents: gap.missingSlugs,
+    });
+    if (!planned.ok) {
+      console.error(`${gap.name}: ${planned.error}`);
+      continue;
+    }
+    const ok = await confirmCommand({
+      title: `Repair “${gap.name}”`,
+      command: planned.spec.display,
+      yes: !!f.yes,
+    });
+    if (!ok) {
+      console.log(`skipped ${gap.name}`);
+      continue;
+    }
+    const result = await repairSkill({
+      source: gap.source,
+      skill: gap.name,
+      agents: gap.missingSlugs,
+    });
+    if (result.stdout) console.log(result.stdout);
+    if (result.stderr) console.error(result.stderr);
+    if (!result.ok) {
+      console.error(`repair failed for ${gap.name} (${result.command})`);
+      process.exit(1);
+    }
+    console.log(`repaired ${gap.name} via ${result.command}`);
+  }
 }
 
 async function main(): Promise<void> {
@@ -333,10 +503,12 @@ async function main(): Promise<void> {
     }
     case "install": {
       const { wizardInstall } = await import("./src/cli/wizards");
+      const mutate = mutateOptsFromFlags();
       const picked = await wizardInstall({
         repo: positional[0],
         provider: typeof f.provider === "string" ? f.provider : undefined,
         yes: !!f.yes,
+        ...mutate,
       });
       if (!picked) {
         console.log("cancelled");
@@ -347,17 +519,29 @@ async function main(): Promise<void> {
     }
     case "uninstall": {
       const { wizardUninstall } = await import("./src/cli/wizards");
+      const mutate = mutateOptsFromFlags();
       const picked = await wizardUninstall({
         name: positional[0],
         provider: typeof f.provider === "string" ? f.provider : undefined,
         repo: typeof f.repo === "string" ? f.repo : undefined,
         yes: !!f.yes,
+        agents: mutate.agents,
+        skills: mutate.skills,
+        all: mutate.all,
       });
       if (!picked) {
         console.log("cancelled");
         process.exit(1);
       }
       await runUninstall(picked);
+      break;
+    }
+    case "update": {
+      await runUpdate(positional);
+      break;
+    }
+    case "repair": {
+      await runRepair(positional);
       break;
     }
     case "wizard": {

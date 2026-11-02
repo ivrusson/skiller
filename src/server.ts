@@ -4,9 +4,12 @@ import { ingestAll } from "./ingest";
 import {
   installSkill,
   planInstall,
+  planRepair,
   planUninstall,
+  planUpdate,
   uninstallSkill,
   type CommandSpec,
+  type SkillsMutateOpts,
 } from "./install";
 import { explore } from "./providers";
 import { clearProviderCaches } from "./providers/cache";
@@ -41,10 +44,34 @@ function send(ws: { send: (s: string) => void }, msg: RunSessionMessage): void {
   }
 }
 
+function asStringList(v: unknown): string[] | undefined {
+  if (Array.isArray(v)) {
+    const list = v.map((x) => String(x).trim()).filter(Boolean);
+    return list.length ? list : undefined;
+  }
+  if (typeof v === "string" && v.trim()) {
+    return v
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+  }
+  return undefined;
+}
+
+function mutateFromBody(b: Record<string, unknown>): SkillsMutateOpts {
+  return {
+    agents: asStringList(b.agents ?? b.agent),
+    skills: asStringList(b.skills ?? b.skill),
+    all: b.all === true,
+    copy: b.copy === true,
+  };
+}
+
 function planFromStart(
   msg: Record<string, unknown>,
 ): { ok: true; spec: CommandSpec } | { ok: false; error: string } {
   const interactive = msg.interactive === true;
+  const mutate = mutateFromBody(msg);
   if (msg.action === "install") {
     if (typeof msg.repo !== "string" || !msg.repo.trim())
       return { ok: false, error: "missing repo" };
@@ -52,6 +79,7 @@ function planFromStart(
       repo: msg.repo.trim(),
       provider: typeof msg.provider === "string" ? msg.provider : undefined,
       interactive,
+      ...mutate,
     });
   }
   if (msg.action === "uninstall") {
@@ -62,9 +90,31 @@ function planFromStart(
       repo: typeof msg.repo === "string" ? msg.repo : undefined,
       provider: typeof msg.provider === "string" ? msg.provider : undefined,
       interactive,
+      ...mutate,
     });
   }
-  return { ok: false, error: "action must be install or uninstall" };
+  if (msg.action === "update") {
+    return planUpdate({
+      names: asStringList(msg.names ?? msg.name),
+      interactive,
+    });
+  }
+  if (msg.action === "repair") {
+    if (typeof msg.source !== "string" || !msg.source.trim())
+      return { ok: false, error: "missing source" };
+    if (typeof msg.skill !== "string" || !msg.skill.trim())
+      return { ok: false, error: "missing skill" };
+    const agents = asStringList(msg.agents ?? msg.agent);
+    if (!agents?.length) return { ok: false, error: "missing agents" };
+    return planRepair({
+      source: msg.source.trim(),
+      skill: msg.skill.trim(),
+      agents,
+      interactive,
+      copy: mutate.copy,
+    });
+  }
+  return { ok: false, error: "action must be install, uninstall, update, or repair" };
 }
 
 export function startServer(opts: { port: number; host: string; refreshOnStart?: boolean }): void {
@@ -207,8 +257,14 @@ export function startServer(opts: { port: number; host: string; refreshOnStart?:
           }
           const provider = typeof b.provider === "string" ? b.provider : undefined;
           const interactive = b.interactive === true;
+          const mutate = mutateFromBody(b);
           if (b.preview === true) {
-            const planned = planInstall({ repo: b.repo.trim(), provider, interactive });
+            const planned = planInstall({
+              repo: b.repo.trim(),
+              provider,
+              interactive,
+              ...mutate,
+            });
             if (!planned.ok) return json({ error: planned.error }, 400);
             return json({
               ok: true,
@@ -219,7 +275,11 @@ export function startServer(opts: { port: number; host: string; refreshOnStart?:
           if (b.confirm !== true) {
             return json({ error: "confirmation required", hint: "pass { confirm: true }" }, 400);
           }
-          const result = await installSkill({ repo: b.repo.trim(), provider });
+          const result = await installSkill({
+            repo: b.repo.trim(),
+            provider,
+            ...mutate,
+          });
           if (result.ok) {
             memCache = null;
             ingestAll();
@@ -245,8 +305,15 @@ export function startServer(opts: { port: number; host: string; refreshOnStart?:
           const provider = typeof b.provider === "string" ? b.provider : undefined;
           const repo = typeof b.repo === "string" ? b.repo : undefined;
           const interactive = b.interactive === true;
+          const mutate = mutateFromBody(b);
           if (b.preview === true) {
-            const planned = planUninstall({ name: b.name.trim(), repo, provider, interactive });
+            const planned = planUninstall({
+              name: b.name.trim(),
+              repo,
+              provider,
+              interactive,
+              ...mutate,
+            });
             if (!planned.ok) return json({ error: planned.error }, 400);
             return json({
               ok: true,
@@ -257,7 +324,64 @@ export function startServer(opts: { port: number; host: string; refreshOnStart?:
           if (b.confirm !== true) {
             return json({ error: "confirmation required", hint: "pass { confirm: true }" }, 400);
           }
-          const result = await uninstallSkill({ name: b.name.trim(), repo, provider });
+          const result = await uninstallSkill({
+            name: b.name.trim(),
+            repo,
+            provider,
+            ...mutate,
+          });
+          if (result.ok) {
+            memCache = null;
+            ingestAll();
+          }
+          return json(result, result.ok ? 200 : 502);
+        },
+      },
+      "/api/repair": {
+        POST: async (req) => {
+          let body: unknown;
+          try {
+            body = await req.json();
+          } catch {
+            return json({ error: "invalid body" }, 400);
+          }
+          const b = (typeof body === "object" && body !== null ? body : {}) as Record<
+            string,
+            unknown
+          >;
+          if (typeof b.source !== "string" || typeof b.skill !== "string") {
+            return json({ error: "expected { source, skill, agents, confirm|preview }" }, 400);
+          }
+          const agents = asStringList(b.agents ?? b.agent);
+          if (!agents?.length) return json({ error: "expected agents: string[]" }, 400);
+          const interactive = b.interactive === true;
+          const copy = b.copy === true;
+          if (b.preview === true) {
+            const planned = planRepair({
+              source: b.source.trim(),
+              skill: b.skill.trim(),
+              agents,
+              interactive,
+              copy,
+            });
+            if (!planned.ok) return json({ error: planned.error }, 400);
+            return json({
+              ok: true,
+              command: planned.spec.display,
+              provider: planned.spec.provider,
+            });
+          }
+          if (b.confirm !== true) {
+            return json({ error: "confirmation required", hint: "pass { confirm: true }" }, 400);
+          }
+          // Mutating repair goes through WS in the UI; HTTP confirm still plans+runs for scripts.
+          const { repairSkill } = await import("./install");
+          const result = await repairSkill({
+            source: b.source.trim(),
+            skill: b.skill.trim(),
+            agents,
+            copy,
+          });
           if (result.ok) {
             memCache = null;
             ingestAll();

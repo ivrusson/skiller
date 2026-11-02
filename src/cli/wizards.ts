@@ -1,11 +1,21 @@
-import { planInstall, planUninstall, type InstallProvider } from "../install";
+import {
+  planInstall,
+  planUninstall,
+  type InstallProvider,
+  type SkillsMutateOpts,
+} from "../install";
 import { askConfirm, askInput, askSelect, canUseTui } from "./tui";
 
 export type WizardAction =
   | { action: "list" }
   | { action: "explore"; query: string }
-  | { action: "install"; repo: string; provider?: InstallProvider }
-  | { action: "uninstall"; name: string; provider?: InstallProvider; repo?: string }
+  | ({ action: "install"; repo: string; provider?: InstallProvider } & SkillsMutateOpts)
+  | ({
+      action: "uninstall";
+      name: string;
+      provider?: InstallProvider;
+      repo?: string;
+    } & SkillsMutateOpts)
   | { action: "ui" }
   | { action: "usage" }
   | { action: "home" }
@@ -31,7 +41,7 @@ export async function confirmCommand(opts: {
     });
   }
   if (!process.stdin.isTTY) {
-    console.error("confirmation required — re-run with --yes");
+    console.error("confirmation required — re-run with `--yes`");
     return false;
   }
   console.log(`Will run: ${opts.command}`);
@@ -53,14 +63,39 @@ export async function confirmCommand(opts: {
   return answer === "y" || answer === "yes";
 }
 
-export async function wizardInstall(partial?: {
-  repo?: string;
-  provider?: string;
-  yes?: boolean;
-}): Promise<{
-  repo: string;
-  provider?: InstallProvider;
-} | null> {
+async function pickAgents(
+  current?: string[],
+  yes?: boolean,
+): Promise<{ agents?: string[]; all?: boolean }> {
+  if (current?.length || yes || !canUseTui()) {
+    return current?.length ? { agents: current } : {};
+  }
+  const picked = await askSelect<string>({
+    title: "Agents",
+    message: "Where should skills link? (skills.sh decides symlink vs copy)",
+    height: 8,
+    options: [
+      { name: "Default", description: "Let skills CLI pick detected agents", value: "default" },
+      { name: "All agents (*)", description: "skills add -a '*'", value: "*" },
+      { name: "Claude Code", description: "-a claude-code", value: "claude-code" },
+      { name: "Cursor", description: "-a cursor", value: "cursor" },
+      { name: "OpenCode", description: "-a opencode", value: "opencode" },
+      { name: "Codex", description: "-a codex", value: "codex" },
+    ],
+  });
+  if (picked === undefined) return {};
+  if (picked === "default") return {};
+  if (picked === "*") return { agents: ["*"] };
+  return { agents: [picked] };
+}
+
+export async function wizardInstall(
+  partial?: {
+    repo?: string;
+    provider?: string;
+    yes?: boolean;
+  } & SkillsMutateOpts,
+): Promise<({ repo: string; provider?: InstallProvider } & SkillsMutateOpts) | null> {
   let repo = partial?.repo?.trim() ?? "";
   if (!repo) {
     if (!canUseTui()) {
@@ -92,7 +127,24 @@ export async function wizardInstall(partial?: {
     if (picked !== "auto") provider = picked;
   }
 
-  const planned = planInstall({ repo, provider });
+  let agents = partial?.agents;
+  let all = partial?.all;
+  let skills = partial?.skills;
+  let copy = partial?.copy;
+  if ((!provider || provider === "skills") && !all) {
+    const picked = await pickAgents(agents, partial?.yes);
+    if (picked.agents) agents = picked.agents;
+    if (picked.all) all = true;
+  }
+
+  const planned = planInstall({
+    repo,
+    provider,
+    agents,
+    skills,
+    all,
+    copy,
+  });
   if (!planned.ok) {
     console.error(planned.error);
     return null;
@@ -103,17 +155,21 @@ export async function wizardInstall(partial?: {
     yes: partial?.yes,
   });
   if (!ok) return null;
-  return { repo, provider };
+  return { repo, provider, agents, skills, all, copy };
 }
 
-export async function wizardUninstall(partial?: {
-  name?: string;
-  provider?: string;
-  repo?: string;
-  yes?: boolean;
-}): Promise<{ name: string; provider?: InstallProvider; repo?: string } | null> {
+export async function wizardUninstall(
+  partial?: {
+    name?: string;
+    provider?: string;
+    repo?: string;
+    yes?: boolean;
+  } & SkillsMutateOpts,
+): Promise<
+  ({ name: string; provider?: InstallProvider; repo?: string } & SkillsMutateOpts) | null
+> {
   let name = partial?.name?.trim() ?? "";
-  if (!name) {
+  if (!name && !partial?.all) {
     if (!canUseTui()) {
       console.error("missing name: skiller uninstall <name>");
       return null;
@@ -132,7 +188,7 @@ export async function wizardUninstall(partial?: {
   if (!provider && canUseTui() && !partial?.yes) {
     const picked = await askSelect<InstallProvider>({
       title: "Uninstall via",
-      message: `Remove “${name}”`,
+      message: `Remove “${name || "all"}”`,
       height: 5,
       options: [
         { name: "skills CLI", description: "npx skills remove -g", value: "skills" },
@@ -152,7 +208,10 @@ export async function wizardUninstall(partial?: {
     }
   }
 
-  const planned = planUninstall({ name, repo, provider });
+  const agents = partial?.agents;
+  const skills = partial?.skills;
+  const all = partial?.all;
+  const planned = planUninstall({ name, repo, provider, agents, skills, all });
   if (!planned.ok) {
     console.error(planned.error);
     return null;
@@ -164,7 +223,7 @@ export async function wizardUninstall(partial?: {
     yes: partial?.yes,
   });
   if (!ok) return null;
-  return { name, provider, repo };
+  return { name, provider, repo, agents, skills, all };
 }
 
 export async function wizardExplore(): Promise<string | null> {

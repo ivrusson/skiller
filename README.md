@@ -139,11 +139,19 @@ skiller explore hono
 skiller explore              # prompts for a query on a TTY
 
 skiller install owner/repo
+skiller install owner/repo -a claude-code -a cursor
+skiller install owner/repo --all          # all skills × all agents (skills --all)
 skiller install owner/repo --provider clawhub
-skiller install              # wizard: repo → provider → confirm
+skiller install              # wizard: repo → provider → agents → confirm
 skiller uninstall hono
-skiller install owner/repo --yes   # skip prompts (scripts / CI)
+skiller uninstall hono -a cursor          # unlink one harness only
+skiller update                            # npx skills update -g
+skiller repair                            # re-add missing agent links via skills -a
+skiller repair my-skill -a claude-code
+skiller install owner/repo --yes          # skip prompts (scripts / CI)
 ```
+
+Install/uninstall/update/repair are a thin wrapper around `npx skills` (symlink by default; `--copy` is an escape hatch). Skiller never creates harness symlinks itself.
 
 On a TTY, install/uninstall/explore use [OpenTUI](https://github.com/anomalyco/opentui) panels. Non-TTY falls back to flags and plain text.
 
@@ -191,6 +199,7 @@ Ingest detects Claude Code `Skill` tool calls exactly, and Cursor skill-file rea
   usage.db
   cache/
     registry.json
+    skills-list.json
     providers/*.json
 ```
 
@@ -212,8 +221,10 @@ skiller info <name> [--json]
 skiller ui [--port 4780] [--host 127.0.0.1] [--open] [--refresh]
 skiller wizard
 skiller explore [query]
-skiller install [owner/repo|slug] [--provider skills|clawhub] [--yes]
-skiller uninstall [name] [--provider skills|clawhub] [--repo slug] [--yes]
+skiller install [owner/repo|slug] [-a agent] [-s skill] [--all] [--copy] [--provider skills|clawhub] [--yes]
+skiller uninstall [name] [-a agent] [-s skill] [--all] [--provider skills|clawhub] [--repo slug] [--yes]
+skiller update [name...] [--yes]
+skiller repair [name...] [-a agent] [--yes]
 skiller tag <name> <tag...>
 skiller untag <name> <tag...>
 skiller tags
