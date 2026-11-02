@@ -34,6 +34,20 @@
       <label title="Omit -y / --no-input and allocate a PTY so you can answer CLI prompts">
         <input type="checkbox" id="termInteractive" /> Interactive prompts
       </label>
+      <label class="term-agents-wrap" title="Passed as skills -a (symlink by default)">
+        Agents
+        <select id="termAgents">
+          <option value="">Default (detected)</option>
+          <option value="*">All (*)</option>
+          <option value="claude-code">Claude Code</option>
+          <option value="cursor">Cursor</option>
+          <option value="opencode">OpenCode</option>
+          <option value="codex">Codex</option>
+        </select>
+      </label>
+      <label title="skills --copy — escape hatch; prefer symlink">
+        <input type="checkbox" id="termCopy" /> Copy (not symlink)
+      </label>
     </div>
     <div class="tlog" id="termLog" aria-live="polite"></div>
     <div class="tfoot">

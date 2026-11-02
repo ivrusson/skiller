@@ -2,6 +2,18 @@ const REPO_RE = /^(?!-)[A-Za-z0-9_.-]+\/(?!-)[A-Za-z0-9_.-]+$/;
 
 export type InstallProvider = "skills" | "clawhub";
 
+/** Flags that project 1:1 onto `npx skills` add/remove (skills provider only). */
+export interface SkillsMutateOpts {
+  /** Target agents (`claude-code`, `cursor`, `*`, …). */
+  agents?: string[];
+  /** Skill names within a pack (`*` = all). */
+  skills?: string[];
+  /** Shorthand for `--skill '*' --agent '*' -y` on add; remove-all on remove. */
+  all?: boolean;
+  /** Copy instead of symlink (escape hatch; not promoted). */
+  copy?: boolean;
+}
+
 export function isInstallableRepo(repo: string | undefined): repo is string {
   return !!repo && REPO_RE.test(repo);
 }
@@ -35,12 +47,50 @@ export interface CommandSpec {
   provider: InstallProvider;
 }
 
-export function planInstall(opts: {
-  repo: string;
-  provider?: string;
-  /** When true, omit auto-yes flags so the user can answer CLI prompts. */
-  interactive?: boolean;
-}): { ok: true; spec: CommandSpec } | { ok: false; error: string } {
+/** Normalize CSV / repeated flag values into a clean string list. */
+export function normalizeList(values: string[] | string | undefined): string[] {
+  if (values === undefined) return [];
+  const raw = Array.isArray(values) ? values : [values];
+  const out: string[] = [];
+  for (const v of raw) {
+    for (const part of String(v).split(",")) {
+      const t = part.trim();
+      if (t && !out.includes(t)) out.push(t);
+    }
+  }
+  return out;
+}
+
+function appendSkillsMutateFlags(
+  argv: string[],
+  opts: SkillsMutateOpts,
+  mode: "add" | "remove",
+): void {
+  if (opts.all) {
+    argv.push("--all");
+    return;
+  }
+  const skills = normalizeList(opts.skills);
+  const agents = normalizeList(opts.agents);
+  for (const s of skills) {
+    argv.push("-s", s);
+  }
+  for (const a of agents) {
+    argv.push("-a", a);
+  }
+  if (mode === "add" && opts.copy) {
+    argv.push("--copy");
+  }
+}
+
+export function planInstall(
+  opts: {
+    repo: string;
+    provider?: string;
+    /** When true, omit auto-yes flags so the user can answer CLI prompts. */
+    interactive?: boolean;
+  } & SkillsMutateOpts,
+): { ok: true; spec: CommandSpec } | { ok: false; error: string } {
   const resolved = resolveProvider(
     opts.provider === "clawhub" || opts.provider === "skills" ? opts.provider : undefined,
     opts.provider,
@@ -61,9 +111,14 @@ export function planInstall(opts: {
   }
   const repo = cleanRepo(opts.repo);
   if (!repo) return { ok: false, error: `invalid repo "${opts.repo}"` };
-  const argv = auto
-    ? ["npx", "-y", "skills", "add", repo, "-g", "-y"]
-    : ["npx", "-y", "skills", "add", repo, "-g"];
+  const argv = ["npx", "-y", "skills", "add", repo, "-g"];
+  appendSkillsMutateFlags(argv, opts, "add");
+  // `--all` already implies -y in the official CLI; still add -y in auto mode when not --all
+  // so non-interactive installs stay quiet. When interactive, never pass -y.
+  if (auto && !opts.all) argv.push("-y");
+  else if (auto && opts.all) {
+    /* --all already implies -y */
+  }
   return {
     ok: true,
     spec: {
@@ -74,12 +129,14 @@ export function planInstall(opts: {
   };
 }
 
-export function planUninstall(opts: {
-  name: string;
-  repo?: string;
-  provider?: string;
-  interactive?: boolean;
-}): { ok: true; spec: CommandSpec } | { ok: false; error: string } {
+export function planUninstall(
+  opts: {
+    name: string;
+    repo?: string;
+    provider?: string;
+    interactive?: boolean;
+  } & SkillsMutateOpts,
+): { ok: true; spec: CommandSpec } | { ok: false; error: string } {
   const resolved = resolveProvider(
     opts.provider === "clawhub" || opts.provider === "skills" ? opts.provider : undefined,
     opts.provider,
@@ -101,10 +158,25 @@ export function planUninstall(opts: {
     };
   }
   const name = opts.name.trim();
-  if (!name) return { ok: false, error: "missing skill name" };
-  const argv = auto
-    ? ["npx", "-y", "skills", "remove", name, "-g", "-y"]
-    : ["npx", "-y", "skills", "remove", name, "-g"];
+  if (opts.all) {
+    const argv = ["npx", "-y", "skills", "remove", "-g", "--all"];
+    return {
+      ok: true,
+      spec: {
+        provider: "skills",
+        argv,
+        display: argv.join(" "),
+      },
+    };
+  }
+  if (!name && !normalizeList(opts.skills).length) {
+    return { ok: false, error: "missing skill name" };
+  }
+  const argv = ["npx", "-y", "skills", "remove"];
+  if (name) argv.push(name);
+  argv.push("-g");
+  appendSkillsMutateFlags(argv, opts, "remove");
+  if (auto) argv.push("-y");
   return {
     ok: true,
     spec: {
@@ -113,6 +185,57 @@ export function planUninstall(opts: {
       display: argv.join(" "),
     },
   };
+}
+
+export function planUpdate(opts: {
+  names?: string[];
+  interactive?: boolean;
+}): { ok: true; spec: CommandSpec } | { ok: false; error: string } {
+  const names = normalizeList(opts.names);
+  const argv = ["npx", "-y", "skills", "update", ...names, "-g"];
+  if (!opts.interactive) argv.push("-y");
+  return {
+    ok: true,
+    spec: {
+      provider: "skills",
+      argv,
+      display: argv.join(" "),
+    },
+  };
+}
+
+/**
+ * Re-add a skill from its lock source targeting missing agents only.
+ * Never creates symlinks itself — delegates to `skills add -g -s … -a …`.
+ */
+export function planRepair(opts: {
+  source: string;
+  skill: string;
+  agents: string[];
+  interactive?: boolean;
+  copy?: boolean;
+}): { ok: true; spec: CommandSpec } | { ok: false; error: string } {
+  const source = cleanRepo(opts.source) ?? opts.source.trim();
+  if (!isInstallableRepo(source) && !REPO_RE.test(source)) {
+    // allow owner/repo only for repair (skills needs a fetchable source)
+    if (!cleanRepo(opts.source)) {
+      return { ok: false, error: `repair needs owner/repo source, got "${opts.source}"` };
+    }
+  }
+  const repo = cleanRepo(opts.source);
+  if (!repo) return { ok: false, error: `repair needs owner/repo source, got "${opts.source}"` };
+  const skill = opts.skill.trim();
+  if (!skill) return { ok: false, error: "missing skill name" };
+  const agents = normalizeList(opts.agents);
+  if (!agents.length) return { ok: false, error: "no agents to repair" };
+  return planInstall({
+    repo,
+    provider: "skills",
+    skills: [skill],
+    agents,
+    copy: opts.copy,
+    interactive: opts.interactive,
+  });
 }
 
 export interface InstallResult {
@@ -222,27 +345,62 @@ export async function runCommandSpec(
   return spawnWithClawhubFallback(spec, opts.timeoutMs ?? 120_000, opts.spawn ?? defaultSpawn);
 }
 
-export async function installSkill(opts: {
-  repo: string;
-  provider?: string;
-  timeoutMs?: number;
-  spawn?: Spawner;
-}): Promise<InstallResult> {
-  const planned = planInstall({ repo: opts.repo, provider: opts.provider });
+export async function installSkill(
+  opts: {
+    repo: string;
+    provider?: string;
+    timeoutMs?: number;
+    spawn?: Spawner;
+    interactive?: boolean;
+  } & SkillsMutateOpts,
+): Promise<InstallResult> {
+  const planned = planInstall(opts);
   if (!planned.ok) {
     return { ok: false, command: "", stdout: "", stderr: planned.error };
   }
   return runCommandSpec(planned.spec, opts);
 }
 
-export async function uninstallSkill(opts: {
-  name: string;
-  repo?: string;
-  provider?: string;
+export async function uninstallSkill(
+  opts: {
+    name: string;
+    repo?: string;
+    provider?: string;
+    timeoutMs?: number;
+    spawn?: Spawner;
+    interactive?: boolean;
+  } & SkillsMutateOpts,
+): Promise<InstallResult> {
+  const planned = planUninstall(opts);
+  if (!planned.ok) {
+    return { ok: false, command: "", stdout: "", stderr: planned.error };
+  }
+  return runCommandSpec(planned.spec, opts);
+}
+
+export async function updateSkills(opts: {
+  names?: string[];
+  interactive?: boolean;
   timeoutMs?: number;
   spawn?: Spawner;
 }): Promise<InstallResult> {
-  const planned = planUninstall({ name: opts.name, repo: opts.repo, provider: opts.provider });
+  const planned = planUpdate(opts);
+  if (!planned.ok) {
+    return { ok: false, command: "", stdout: "", stderr: planned.error };
+  }
+  return runCommandSpec(planned.spec, opts);
+}
+
+export async function repairSkill(opts: {
+  source: string;
+  skill: string;
+  agents: string[];
+  interactive?: boolean;
+  copy?: boolean;
+  timeoutMs?: number;
+  spawn?: Spawner;
+}): Promise<InstallResult> {
+  const planned = planRepair(opts);
   if (!planned.ok) {
     return { ok: false, command: "", stdout: "", stderr: planned.error };
   }

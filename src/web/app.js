@@ -306,8 +306,25 @@ function trustBadge(t) {
   );
 }
 
+function termMutateOpts() {
+  const agentsSel = $("#termAgents");
+  const copyEl = $("#termCopy");
+  const agentsVal = agentsSel ? agentsSel.value : "";
+  const opts = {};
+  if (agentsVal) opts.agents = [agentsVal];
+  if (copyEl && copyEl.checked) opts.copy = true;
+  return opts;
+}
+
+function apiPathForKind(kind) {
+  if (kind === "install") return "/api/install";
+  if (kind === "uninstall") return "/api/uninstall";
+  if (kind === "repair") return "/api/repair";
+  return "/api/install";
+}
+
 async function previewCommand(kind, body) {
-  const res = await fetch(kind === "install" ? "/api/install" : "/api/uninstall", {
+  const res = await fetch(apiPathForKind(kind), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...body, preview: true }),
@@ -373,12 +390,15 @@ function openTermSession(opts) {
 async function refreshTermCommand() {
   if (!termPayload) return;
   const interactive = $("#termInteractive").checked;
+  const mutate = termMutateOpts();
   try {
     const command = await previewCommand(termPayload.kind, {
       ...termPayload.body,
+      ...mutate,
       interactive,
     });
     termPayload.command = command;
+    termPayload.body = { ...termPayload.body, ...mutate };
     $("#termCmd").textContent = command;
   } catch (err) {
     termAppend(String(err) + "\n", "err");
@@ -388,6 +408,8 @@ async function refreshTermCommand() {
 function startTermRun() {
   if (!termPayload || termWs) return;
   const interactive = $("#termInteractive").checked;
+  const mutate = termMutateOpts();
+  termPayload.body = { ...termPayload.body, ...mutate };
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   const ws = new WebSocket(proto + "//" + location.host + "/ws/run");
   termWs = ws;
@@ -475,6 +497,16 @@ $("#termStart").onclick = async () => {
 $("#termInteractive").onchange = () => {
   refreshTermCommand();
 };
+if ($("#termAgents")) {
+  $("#termAgents").onchange = () => {
+    refreshTermCommand();
+  };
+}
+if ($("#termCopy")) {
+  $("#termCopy").onchange = () => {
+    refreshTermCommand();
+  };
+}
 $("#termInput").onkeydown = (e) => {
   if (e.key !== "Enter" || !termWs) return;
   e.preventDefault();
@@ -490,34 +522,57 @@ $("#term").onclick = (e) => {
 };
 
 async function runInstall(opts) {
-  const command = await previewCommand("install", { repo: opts.repo, provider: opts.provider });
+  const body = { repo: opts.repo, provider: opts.provider, ...termMutateOpts() };
+  const command = await previewCommand("install", body);
   const result = await openTermSession({
     title: "Install “" + opts.name + "”",
     kind: "install",
-    body: { repo: opts.repo, provider: opts.provider },
+    body,
     command,
     startLabel: "Install",
-    hint: "Enable Interactive prompts if the CLI asks questions.",
+    hint: "Pick Agents to pass -a to npx skills. Prefer symlink (default); Copy is an escape hatch.",
   });
   return result;
 }
 
 async function runUninstall(opts) {
-  const command = await previewCommand("uninstall", {
+  const body = {
     name: opts.name,
     repo: opts.repo,
     provider: opts.provider,
-  });
+    ...termMutateOpts(),
+  };
+  const command = await previewCommand("uninstall", body);
   const result = await openTermSession({
     title: "Uninstall “" + opts.name + "”",
     kind: "uninstall",
-    body: { name: opts.name, repo: opts.repo, provider: opts.provider },
+    body,
     command,
     startLabel: "Uninstall",
     danger: true,
     hint: "Skiller does not delete skill folders itself — the CLI does.",
   });
   return result;
+}
+
+async function runRepair(opts) {
+  const mutate = termMutateOpts();
+  const agents = mutate.agents && mutate.agents.length ? mutate.agents : ["*"];
+  const body = {
+    source: opts.source,
+    skill: opts.skill,
+    agents,
+    copy: mutate.copy,
+  };
+  const command = await previewCommand("repair", body);
+  return openTermSession({
+    title: "Repair “" + opts.skill + "”",
+    kind: "repair",
+    body,
+    command,
+    startLabel: "Repair",
+    hint: "Re-runs skills add -g -s … -a … so missing harness links are created. No homemade symlinks.",
+  });
 }
 
 function renderExplore() {
@@ -1359,7 +1414,11 @@ async function openDetail(id) {
     ' <span class="src">' +
     escapeHtml(s.source) +
     "</span></div>" +
-    '<div class="drawer-links"><button class="danger-btn" id="drawerUninstallInstalled">Uninstall</button></div>' +
+    '<div class="drawer-links">' +
+    (s.skillsSource && /^(?!-)[A-Za-z0-9_.-]+\/(?!-)[A-Za-z0-9_.-]+$/.test(s.skillsSource)
+      ? '<button class="primary" id="drawerRepairInstalled">Fix agents</button>'
+      : "") +
+    '<button class="danger-btn" id="drawerUninstallInstalled">Uninstall</button></div>' +
     reg +
     trustHtml +
     '<p class="lead">' +
@@ -1367,6 +1426,16 @@ async function openDetail(id) {
     "</p>" +
     (data.skill.summary && data.skill.summary !== data.skill.description
       ? "<p><em>" + escapeHtml(data.skill.summary) + "</em></p>"
+      : "") +
+    (s.agents && s.agents.length
+      ? '<h3 class="label">Agents</h3><p class="lead">' +
+        escapeHtml(s.agents.join(", ")) +
+        (s.skillsSource
+          ? ' <span style="color:var(--faint);font:11px var(--mono)">· ' +
+            escapeHtml(s.skillsSource) +
+            "</span>"
+          : "") +
+        "</p>"
       : "") +
     '<h3 class="label">Tags</h3><div id="tagEditor"></div>' +
     '<h3 class="label">Details</h3>' +
@@ -1442,6 +1511,30 @@ async function openDetail(id) {
   wireTips($("#drawer"));
   const unBtn = $("#drawerUninstallInstalled");
   if (unBtn) unBtn.onclick = () => uninstallInstalled(s, unBtn);
+  const repairBtn = $("#drawerRepairInstalled");
+  if (repairBtn) {
+    repairBtn.onclick = async () => {
+      repairBtn.disabled = true;
+      repairBtn.textContent = "…";
+      try {
+        if ($("#termAgents") && !$("#termAgents").value) $("#termAgents").value = "*";
+        const result = await runRepair({ source: s.skillsSource, skill: s.name });
+        if (result.cancelled) {
+          repairBtn.disabled = false;
+          repairBtn.textContent = "Fix agents";
+          return;
+        }
+        if (!result.ok) throw new Error("command exited " + result.code);
+        closeDetail();
+        await load(true);
+      } catch (err) {
+        repairBtn.disabled = false;
+        repairBtn.textContent = "retry";
+        repairBtn.title = String(err);
+        alert("Repair failed:\n" + String(err));
+      }
+    };
+  }
   const filterOwnerBtn = $("#drawerFilterOwner");
   if (filterOwnerBtn) {
     filterOwnerBtn.onclick = () => {
